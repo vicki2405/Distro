@@ -20,202 +20,250 @@ const props = defineProps({
 
 const containerRef = ref(null);
 const isAutoRotate = ref(true);
-const isWireframe = ref(false);
 const activeAngle = ref('front');
 
 let scene, camera, renderer, controls, animationFrameId;
-let shirtGroup, shirtFrontMesh, shirtBackMesh, leftSleeveMesh, rightSleeveMesh;
-let textureLoader = new THREE.TextureLoader();
+let showcaseGroup, frontMesh, backMesh, pedestalMesh;
 
-// Buat Procedural Fallback Texture jika belum ada gambar yang diupload
-const createFallbackTexture = () => {
+// Helper: Buat tekstur kain realistis dengan gambar produk terpusat sempurna
+const generateProductTexture = (imageElement = null) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2048;
+    canvas.height = 2048;
+    const ctx = canvas.getContext('2d');
+
+    // 1. Warna Dasar Kain Hitam Washed Streetwear
+    ctx.fillStyle = '#0b0f17';
+    ctx.fillRect(0, 0, 2048, 2048);
+
+    // 2. Efek Serat Tekstur Kain Katun (Micro Noise)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
+    for (let i = 0; i < 2048; i += 8) {
+        ctx.fillRect(i, 0, 4, 2048);
+        ctx.fillRect(0, i, 2048, 4);
+    }
+
+    if (imageElement) {
+        // 3. Gambar Produk Terpusat Presisi (Aspect-Fit Center)
+        const imgW = imageElement.naturalWidth || imageElement.width;
+        const imgH = imageElement.naturalHeight || imageElement.height;
+        const targetSize = 1750;
+
+        let drawW, drawH;
+        if (imgW > imgH) {
+            drawW = targetSize;
+            drawH = (imgH / imgW) * targetSize;
+        } else {
+            drawH = targetSize;
+            drawW = (imgW / imgH) * targetSize;
+        }
+
+        const drawX = (2048 - drawW) / 2;
+        const drawY = (2048 - drawH) / 2;
+
+        ctx.drawImage(imageElement, drawX, drawY, drawW, drawH);
+    } else {
+        // Fallback jika belum upload foto
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(300, 400, 1448, 1248);
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 80px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('DISTRO OPERATIONS', 1024, 850);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 110px sans-serif';
+        ctx.fillText('STREETWEAR APPAREL', 1024, 1000);
+
+        ctx.fillStyle = '#a855f7';
+        ctx.font = 'bold 60px monospace';
+        ctx.fillText(props.productName.toUpperCase().slice(0, 28), 1024, 1120);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '40px monospace';
+        ctx.fillText('3D STUDIO SHOWCASE • DISTRO WMS', 1024, 1350);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    return texture;
+};
+
+// Buat Tekstur Bagian Belakang Pakaian
+const generateBackTexture = () => {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 1024;
     const ctx = canvas.getContext('2d');
 
-    // Background kain hitam pekat tekstur washed cotton
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#0b0f17';
     ctx.fillRect(0, 0, 1024, 1024);
 
-    // Grid halus & bintik tekstur kain
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 1024; i += 32) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, 1024);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(1024, i);
-        ctx.stroke();
-    }
+    // Label Belakang Leher Distro
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(412, 120, 200, 80);
 
-    // Streetwear Graphic Banner
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(412, 120, 200, 80);
+
     ctx.fillStyle = '#f59e0b';
-    ctx.font = 'bold 54px monospace';
+    ctx.font = 'bold 24px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('DISTRO OPERATIONS', 512, 380);
+    ctx.fillText('DISTRO WMS', 512, 155);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '900 68px sans-serif';
-    ctx.fillText('STREETWEAR WMS', 512, 470);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '16px monospace';
+    ctx.fillText('AUTHENTIC APPAREL', 512, 180);
 
-    ctx.fillStyle = '#a855f7';
-    ctx.font = '600 32px monospace';
-    ctx.fillText(props.productName.toUpperCase().slice(0, 24), 512, 530);
-
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(200, 280, 624, 320);
-
-    ctx.fillStyle = '#64748b';
-    ctx.font = '24px monospace';
-    ctx.fillText('3D APPAREL MODEL • REALTIME WEBGL', 512, 700);
+    // Garis Jahitan Pundak & Punggung
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.setLineDash([8, 8]);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(100, 240);
+    ctx.lineTo(924, 240);
+    ctx.stroke();
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     return texture;
 };
 
-// Buat 3D T-Shirt / Apparel Geometry
-const buildShirtModel = () => {
-    shirtGroup = new THREE.Group();
-
-    // 1. Torso Depan & Belakang (Bentuk Badan Kaos Melengkung Ergonomis)
-    const shirtShape = new THREE.Shape();
-    // Kerah & Bahu
-    shirtShape.moveTo(-0.4, 1.1);
-    shirtShape.quadraticCurveTo(0, 0.95, 0.4, 1.1); // Kerah leher
-    shirtShape.lineTo(0.95, 0.9);                   // Bahu kanan
-    shirtShape.lineTo(1.15, 0.5);                   // Lengan atas kanan
-    shirtShape.lineTo(0.85, 0.35);                  // Ketiak kanan
-    shirtShape.lineTo(0.75, -1.0);                  // Pinggang kanan ke bawah
-    shirtShape.quadraticCurveTo(0, -1.05, -0.75, -1.0); // Bawah kaos melengkung
-    shirtShape.lineTo(-0.85, 0.35);                 // Ketiak kiri
-    shirtShape.lineTo(-1.15, 0.5);                  // Lengan atas kiri
-    shirtShape.lineTo(-0.95, 0.9);                  // Bahu kiri
-    shirtShape.closePath();
-
-    // Ekstrusi tebal kain 3D
-    const extrudeSettings = {
-        depth: 0.22,
-        bevelEnabled: true,
-        bevelSegments: 4,
-        steps: 2,
-        bevelSize: 0.04,
-        bevelThickness: 0.04,
-    };
-
-    const geometry = new THREE.ExtrudeGeometry(shirtShape, extrudeSettings);
-    geometry.center();
-
-    // Bahan Kaos (Tekstur Kain Katun Hitam Streetwear)
-    const backMaterial = new THREE.MeshStandardMaterial({
-        color: 0x111827,
-        roughness: 0.75,
-        metalness: 0.1,
-        wireframe: isWireframe.value,
-    });
-
-    let frontMaterial;
-    if (props.imageUrl) {
-        const texture = textureLoader.load(props.imageUrl);
-        texture.colorSpace = THREE.SRGBColorSpace;
-        texture.wrapS = THREE.ClampToEdgeWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
-
-        frontMaterial = new THREE.MeshStandardMaterial({
-            map: texture,
-            roughness: 0.65,
-            metalness: 0.08,
-            wireframe: isWireframe.value,
-        });
-    } else {
-        frontMaterial = new THREE.MeshStandardMaterial({
-            map: createFallbackTexture(),
-            roughness: 0.7,
-            metalness: 0.1,
-            wireframe: isWireframe.value,
-        });
+// Bangun 3D Studio Showcase Model
+const buildShowcase = (imageElement = null) => {
+    if (showcaseGroup) {
+        scene.remove(showcaseGroup);
     }
 
-    // Material Array: [Depan/Belakang, Sisi samping kain]
-    const materials = [frontMaterial, backMaterial];
-    shirtFrontMesh = new THREE.Mesh(geometry, materials);
-    shirtFrontMesh.castShadow = true;
-    shirtFrontMesh.receiveShadow = true;
-    shirtGroup.add(shirtFrontMesh);
+    showcaseGroup = new THREE.Group();
 
-    // 2. Rib Kerah Leher 3D (Collar Ring)
-    const collarGeom = new THREE.TorusGeometry(0.36, 0.04, 12, 32);
-    const collarMat = new THREE.MeshStandardMaterial({
-        color: 0x1e293b,
-        roughness: 0.9,
+    // 1. Geometri Panel Pakaian 3D Melengkung Ergonomis (Curved Torso Geometry)
+    const width = 2.4;
+    const height = 2.8;
+    const segmentsX = 32;
+    const segmentsY = 32;
+
+    const planeGeom = new THREE.PlaneGeometry(width, height, segmentsX, segmentsY);
+    const pos = planeGeom.attributes.position;
+
+    // Berikan lengkungan alami seperti pakaian yang digantung/dipajang di studio
+    for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const y = pos.getY(i);
+        // Lengkungan horizontal & vertikal lembut
+        const z = -Math.pow(x / (width * 0.5), 2) * 0.18 + Math.sin(y * 1.5) * 0.04;
+        pos.setZ(i, z);
+    }
+    planeGeom.computeVertexNormals();
+
+    const frontTexture = generateProductTexture(imageElement);
+    const frontMaterial = new THREE.MeshStandardMaterial({
+        map: frontTexture,
+        roughness: 0.75,
+        metalness: 0.08,
+        side: THREE.FrontSide,
     });
-    const collar = new THREE.Mesh(collarGeom, collarMat);
-    collar.rotation.x = Math.PI / 2.2;
-    collar.position.set(0, 1.05, 0.02);
-    collar.scale.set(1.2, 0.7, 1);
-    shirtGroup.add(collar);
 
-    // 3. Manset Lengan Kiri & Kanan 3D (Sleeve Cuffs)
-    const cuffGeom = new THREE.CylinderGeometry(0.18, 0.19, 0.1, 16);
-    const cuffMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+    frontMesh = new THREE.Mesh(planeGeom, frontMaterial);
+    frontMesh.castShadow = true;
+    frontMesh.receiveShadow = true;
+    showcaseGroup.add(frontMesh);
 
-    leftSleeveMesh = new THREE.Mesh(cuffGeom, cuffMat);
-    leftSleeveMesh.rotation.z = Math.PI / 3.2;
-    leftSleeveMesh.position.set(-1.05, 0.42, 0);
-    shirtGroup.add(leftSleeveMesh);
+    // 2. Bagian Belakang Pakaian (Back Side)
+    const backGeom = planeGeom.clone();
+    const backTexture = generateBackTexture();
+    const backMaterial = new THREE.MeshStandardMaterial({
+        map: backTexture,
+        roughness: 0.8,
+        metalness: 0.05,
+        side: THREE.FrontSide,
+    });
 
-    rightSleeveMesh = new THREE.Mesh(cuffGeom, cuffMat);
-    rightSleeveMesh.rotation.z = -Math.PI / 3.2;
-    rightSleeveMesh.position.set(1.05, 0.42, 0);
-    shirtGroup.add(rightSleeveMesh);
+    backMesh = new THREE.Mesh(backGeom, backMaterial);
+    backMesh.rotation.y = Math.PI;
+    backMesh.position.z = -0.06;
+    showcaseGroup.add(backMesh);
 
-    // 4. Pedestal Showroom Studio di Bawah Pakaian (Circular Turntable Stage)
-    const pedestalGroup = new THREE.Group();
-    const stageGeom = new THREE.CylinderGeometry(1.6, 1.7, 0.12, 48);
+    // 3. Gantungan Hanger Studio Distro Minimalis (Atas)
+    const hangerGeom = new THREE.CylinderGeometry(0.025, 0.025, 2.2, 16);
+    const hangerMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.2 });
+    const hanger = new THREE.Mesh(hangerGeom, hangerMat);
+    hanger.rotation.z = Math.PI / 2;
+    hanger.position.set(0, 1.45, -0.03);
+    showcaseGroup.add(hanger);
+
+    // Hook Hanger
+    const hookGeom = new THREE.TorusGeometry(0.12, 0.02, 12, 24, Math.PI * 1.3);
+    const hook = new THREE.Mesh(hookGeom, hangerMat);
+    hook.position.set(0, 1.58, -0.03);
+    hook.rotation.z = -Math.PI / 2;
+    showcaseGroup.add(hook);
+
+    // 4. Pedestal Showroom Studio (Panggung Melingkar)
+    const stageGroup = new THREE.Group();
+    
+    // Alas Utama
+    const stageGeom = new THREE.CylinderGeometry(1.9, 2.05, 0.15, 64);
     const stageMat = new THREE.MeshStandardMaterial({
-        color: 0x090d16,
-        roughness: 0.35,
-        metalness: 0.75,
+        color: 0x070a12,
+        roughness: 0.25,
+        metalness: 0.85,
     });
-    const stage = new THREE.Mesh(stageGeom, stageMat);
-    stage.position.y = -1.45;
-    stage.receiveShadow = true;
-    pedestalGroup.add(stage);
+    pedestalMesh = new THREE.Mesh(stageGeom, stageMat);
+    pedestalMesh.position.y = -1.8;
+    pedestalMesh.receiveShadow = true;
+    stageGroup.add(pedestalMesh);
 
-    // Ring Cahaya Neon Turntable
-    const ringGeom = new THREE.RingGeometry(1.61, 1.66, 48);
-    const ringMat = new THREE.MeshBasicMaterial({
-        color: 0xa855f7,
+    // Ring Cahaya Neon Amber & Purple
+    const neonRingGeom = new THREE.RingGeometry(1.91, 1.96, 64);
+    const neonRingMat = new THREE.MeshBasicMaterial({
+        color: 0xf59e0b,
         side: THREE.DoubleSide,
     });
-    const ring = new THREE.Mesh(ringGeom, ringMat);
-    ring.rotation.x = Math.PI / 2;
-    ring.position.y = -1.38;
-    pedestalGroup.add(ring);
+    const neonRing = new THREE.Mesh(neonRingGeom, neonRingMat);
+    neonRing.rotation.x = Math.PI / 2;
+    neonRing.position.y = -1.72;
+    stageGroup.add(neonRing);
 
-    shirtGroup.add(pedestalGroup);
-    shirtGroup.position.y = 0.2;
+    showcaseGroup.add(stageGroup);
+    showcaseGroup.position.y = 0.15;
 
-    scene.add(shirtGroup);
+    scene.add(showcaseGroup);
+};
+
+const loadTextureAndBuild = () => {
+    if (props.imageUrl) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = props.imageUrl;
+        img.onload = () => {
+            buildShowcase(img);
+        };
+        img.onerror = () => {
+            buildShowcase(null);
+        };
+    } else {
+        buildShowcase(null);
+    }
 };
 
 const initThree = () => {
     if (!containerRef.value) return;
     const width = containerRef.value.clientWidth;
-    const height = containerRef.value.clientHeight || 420;
+    const height = containerRef.value.clientHeight || 450;
 
-    // 1. Scene & Background
+    // 1. Scene
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x020617, 0.06);
+    scene.fog = new THREE.FogExp2(0x020617, 0.05);
 
     // 2. Camera
     camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-    camera.position.set(0, 0.3, 3.8);
+    camera.position.set(0, 0.2, 4.3);
 
     // 3. Renderer
     renderer = new THREE.WebGLRenderer({
@@ -231,44 +279,49 @@ const initThree = () => {
 
     containerRef.value.replaceChildren(renderer.domElement);
 
-    // 4. OrbitControls (Rotasi 360 Derajat Bebas)
+    // 4. OrbitControls (Putar Bebas 360 Derajat Penuh)
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
+    controls.dampingFactor = 0.06;
     controls.autoRotate = isAutoRotate.value;
-    controls.autoRotateSpeed = 2.2;
-    controls.minDistance = 2.2;
-    controls.maxDistance = 5.5;
-    controls.maxPolarAngle = Math.PI / 2 + 0.15; // Cegah tembus bawah pedestal
+    controls.autoRotateSpeed = 2.0;
+    controls.minDistance = 2.4;
+    controls.maxDistance = 6.0;
+    controls.maxPolarAngle = Math.PI / 2 + 0.12;
     controls.target.set(0, 0, 0);
 
     // 5. Studio Lighting
-    // Ambient Light
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.6);
     scene.add(ambientLight);
 
-    // Key Light Depan
-    const keyLight = new THREE.DirectionalLight(0xfff5eb, 2.8);
-    keyLight.position.set(3, 4, 4);
+    // Key Light Depan Lembut
+    const keyLight = new THREE.DirectionalLight(0xfff7ed, 3.2);
+    keyLight.position.set(2.5, 4, 4);
     keyLight.castShadow = true;
     keyLight.shadow.mapSize.width = 1024;
     keyLight.shadow.mapSize.height = 1024;
     scene.add(keyLight);
 
-    // Fill Light Samping Kiri (Purple Glow)
-    const fillLight = new THREE.PointLight(0xa855f7, 2.5, 8);
-    fillLight.position.set(-3, 2, 2);
-    scene.add(fillLight);
+    // Spot Light Fokus ke Sablon Pakaian
+    const spotLight = new THREE.SpotLight(0xffffff, 2.5, 10, Math.PI / 5, 0.4);
+    spotLight.position.set(0, 3, 3.5);
+    spotLight.target.position.set(0, 0, 0);
+    scene.add(spotLight);
+    scene.add(spotLight.target);
 
-    // Rim Light Belakang (Amber Warm Light)
-    const rimLight = new THREE.PointLight(0xf59e0b, 3.0, 8);
-    rimLight.position.set(2, 3, -3);
-    scene.add(rimLight);
+    // Rim Light Ungu & Kuning Belakang
+    const rimPurple = new THREE.PointLight(0xa855f7, 3.5, 7);
+    rimPurple.position.set(-3, 2, -2.5);
+    scene.add(rimPurple);
 
-    // 6. Bangun Model Kaos 3D
-    buildShirtModel();
+    const rimAmber = new THREE.PointLight(0xf59e0b, 3.5, 7);
+    rimAmber.position.set(3, 2, -2.5);
+    scene.add(rimAmber);
 
-    // 7. Animation Loop
+    // 6. Muat Tekstur & Render
+    loadTextureAndBuild();
+
+    // 7. Render Loop
     const animate = () => {
         animationFrameId = requestAnimationFrame(animate);
         controls.update();
@@ -280,13 +333,12 @@ const initThree = () => {
 const onWindowResize = () => {
     if (!containerRef.value || !renderer || !camera) return;
     const width = containerRef.value.clientWidth;
-    const height = containerRef.value.clientHeight || 420;
+    const height = containerRef.value.clientHeight || 450;
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
 };
 
-// Controls Methods
 const toggleAutoRotate = () => {
     isAutoRotate.value = !isAutoRotate.value;
     if (controls) {
@@ -299,15 +351,13 @@ const setCameraView = (view) => {
     if (!camera || !controls) return;
 
     if (view === 'front') {
-        camera.position.set(0, 0.3, 3.8);
+        camera.position.set(0, 0.2, 4.3);
     } else if (view === 'back') {
-        camera.position.set(0, 0.3, -3.8);
+        camera.position.set(0, 0.2, -4.3);
     } else if (view === 'left') {
-        camera.position.set(-3.8, 0.3, 0);
+        camera.position.set(-4.3, 0.2, 0);
     } else if (view === 'right') {
-        camera.position.set(3.8, 0.3, 0);
-    } else if (view === 'top') {
-        camera.position.set(0, 3.8, 0.5);
+        camera.position.set(4.3, 0.2, 0);
     }
     controls.target.set(0, 0, 0);
     controls.update();
@@ -323,15 +373,6 @@ const zoomOut = () => {
     if (!camera) return;
     camera.position.multiplyScalar(1.15);
     controls.update();
-};
-
-const toggleWireframe = () => {
-    isWireframe.value = !isWireframe.value;
-    if (shirtFrontMesh) {
-        shirtFrontMesh.material.forEach((mat) => {
-            mat.wireframe = isWireframe.value;
-        });
-    }
 };
 
 onMounted(() => {
@@ -350,10 +391,7 @@ onBeforeUnmount(() => {
 });
 
 watch(() => props.imageUrl, () => {
-    if (scene && shirtGroup) {
-        scene.remove(shirtGroup);
-        buildShirtModel();
-    }
+    loadTextureAndBuild();
 });
 </script>
 
@@ -363,52 +401,39 @@ watch(() => props.imageUrl, () => {
         <!-- HEADER OVERLAY VIEWPORT 3D -->
         <div class="absolute top-4 inset-x-4 z-20 flex items-center justify-between pointer-events-none">
             <div class="flex items-center gap-2 pointer-events-auto">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span class="text-[11px] font-mono font-bold uppercase tracking-wider text-white px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-700/80 backdrop-blur-md shadow-md">
-                    WebGL 3D Studio
+                    3D Studio Showroom
                 </span>
             </div>
 
             <div class="flex items-center gap-2 pointer-events-auto">
                 <button
                     type="button"
-                    @click="toggleWireframe"
-                    :class="[
-                        'text-[10px] font-mono px-2.5 py-1 rounded-xl backdrop-blur-md border transition cursor-pointer',
-                        isWireframe
-                            ? 'bg-purple-500 text-slate-950 font-black border-purple-400'
-                            : 'bg-slate-900/80 text-slate-300 border-slate-700 hover:text-white'
-                    ]"
-                    title="Toggle Wireframe 3D Mesh"
-                >
-                    {{ isWireframe ? 'Grid Mesh ON' : 'Mesh' }}
-                </button>
-                <button
-                    type="button"
                     @click="toggleAutoRotate"
                     :class="[
-                        'text-[10px] font-mono px-2.5 py-1 rounded-xl backdrop-blur-md border transition cursor-pointer flex items-center gap-1.5',
+                        'text-[10px] font-mono px-3 py-1.5 rounded-xl backdrop-blur-md border transition cursor-pointer flex items-center gap-1.5',
                         isAutoRotate
-                            ? 'bg-amber-500 text-slate-950 font-black border-amber-400 shadow-lg shadow-amber-500/20'
+                            ? 'bg-amber-500 text-slate-950 font-black border-amber-400 shadow-lg shadow-amber-500/25'
                             : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-white'
                     ]"
                 >
                     <span :class="isAutoRotate ? 'animate-spin' : ''">⟳</span>
-                    <span>{{ isAutoRotate ? '360° Putar ON' : 'Putar Pause' }}</span>
+                    <span>{{ isAutoRotate ? '360° Putar Aktif' : 'Putar Jeda' }}</span>
                 </button>
             </div>
         </div>
 
-        <!-- THREE.JS CANVAS CONTAINER (DRAGGABLE 360°) -->
+        <!-- THREE.JS CANVAS CONTAINER (PUTAR BEBAS 360°) -->
         <div
             ref="containerRef"
-            class="w-full h-[430px] sm:h-[480px] cursor-grab active:cursor-grabbing relative z-10"
+            class="w-full h-[440px] sm:h-[490px] cursor-grab active:cursor-grabbing relative z-10"
         ></div>
 
         <!-- FLOATING INSTRUCTION HINT -->
         <div class="absolute bottom-16 inset-x-0 z-20 flex justify-center pointer-events-none">
-            <span class="text-[10px] font-mono text-slate-400 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-800 backdrop-blur-md">
-                🖱️ Drag/Geser untuk Putar 360° • Scroll untuk Zoom
+            <span class="text-[10px] font-mono text-slate-400 bg-slate-900/85 px-3.5 py-1 rounded-full border border-slate-800 backdrop-blur-md shadow">
+                🖱️ Klik & Geser untuk Memutar 360° Bebas • Scroll untuk Zoom
             </span>
         </div>
 
