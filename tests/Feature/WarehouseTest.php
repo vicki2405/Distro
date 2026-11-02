@@ -140,6 +140,19 @@ class WarehouseTest extends TestCase
         ]);
     }
 
+    public function test_can_view_product_detail_page(): void
+    {
+        $response = $this->actingAs($this->staff)->get(route('warehouse.products.show', $this->product->id));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Warehouse/Products/Show')
+            ->has('product')
+            ->has('totalStock')
+            ->has('movements')
+        );
+    }
+
     public function test_can_update_master_product(): void
     {
         $response = $this->actingAs($this->owner)->put(route('warehouse.products.update', $this->product->id), [

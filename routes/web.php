@@ -37,7 +37,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('warehouse')->name('warehouse.')->group(function () {
         Route::get('/', [WarehouseDashboardController::class, 'index'])->name('dashboard');
-        Route::resource('products', ProductController::class)->except(['show']);
+        Route::resource('products', ProductController::class);
         Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::get('/in', [StockInController::class, 'create'])->name('in.create');
         Route::post('/in', [StockInController::class, 'store'])->name('in.store');

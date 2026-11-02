@@ -12,7 +12,6 @@ const props = defineProps({
 
 const search = ref(props.filters.search || '');
 const category = ref(props.filters.category || '');
-const showHpp = ref(false);
 
 const applyFilter = () => {
     router.get(route('warehouse.products.index'), {
@@ -79,16 +78,6 @@ const deleteProduct = (product) => {
                             {{ c.name }}
                         </option>
                     </select>
-
-                    <button
-                        v-if="isOwner"
-                        @click="showHpp = !showHpp"
-                        class="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-amber-400 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
-                        title="Tampilkan / Sembunyikan Modal HPP"
-                    >
-                        <span>{{ showHpp ? '👁️' : '🙈' }}</span>
-                        <span>{{ showHpp ? 'Sembunyikan HPP' : 'Buka HPP' }}</span>
-                    </button>
                 </div>
 
                 <div class="flex items-center gap-2 w-full sm:w-auto">
@@ -96,7 +85,7 @@ const deleteProduct = (product) => {
                         v-model="search"
                         @keyup.enter="applyFilter"
                         type="text"
-                        placeholder="Cari nama artikel baju..."
+                        placeholder="Cari nama artikel produk..."
                         class="text-xs px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 w-full sm:w-72 transition"
                     />
                     <button
@@ -108,7 +97,7 @@ const deleteProduct = (product) => {
                 </div>
             </div>
 
-            <!-- TABLE MASTER PRODUK -->
+            <!-- TABLE MASTER PRODUK (RINGKAS & BERSIH) -->
             <div class="bg-slate-900/70 backdrop-blur-md rounded-2xl border border-slate-800/80 overflow-hidden shadow-xl">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
@@ -116,9 +105,7 @@ const deleteProduct = (product) => {
                             <tr>
                                 <th class="p-4 sm:p-5">Produk & Artikel</th>
                                 <th class="p-4 sm:p-5">Kategori</th>
-                                <th class="p-4 sm:p-5">Varian Ukuran</th>
                                 <th class="p-4 sm:p-5 text-center">Total Stok</th>
-                                <th v-if="isOwner" class="p-4 sm:p-5 text-right">Modal (HPP)</th>
                                 <th class="p-4 sm:p-5 text-right">Harga Retail</th>
                                 <th class="p-4 sm:p-5 text-center">Aksi</th>
                             </tr>
@@ -127,7 +114,7 @@ const deleteProduct = (product) => {
                             <tr v-for="p in products.data" :key="p.id" class="hover:bg-slate-800/30 transition">
                                 <td class="p-4 sm:p-5">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-11 h-11 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                                        <div class="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
                                             <img
                                                 v-if="p.image_url"
                                                 :src="p.image_url"
@@ -139,49 +126,58 @@ const deleteProduct = (product) => {
                                             </span>
                                         </div>
                                         <div>
-                                            <div class="font-bold text-white text-sm">{{ p.name }}</div>
-                                            <div v-if="p.description" class="text-[11px] text-slate-500 font-normal line-clamp-1 mt-0.5">
+                                            <Link
+                                                :href="route('warehouse.products.show', p.id)"
+                                                class="font-bold text-white text-sm hover:text-purple-400 transition"
+                                            >
+                                                {{ p.name }}
+                                            </Link>
+                                            <div v-if="p.description" class="text-[11px] text-slate-500 font-normal line-clamp-1 mt-0.5 max-w-sm">
                                                 {{ p.description }}
                                             </div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="p-4 sm:p-5 whitespace-nowrap">
-                                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700/60">
+                                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60">
                                         {{ p.category?.name }}
                                     </span>
                                 </td>
-                                <td class="p-4 sm:p-5">
-                                    <div class="flex flex-wrap gap-1.5 max-w-xs">
-                                        <span
-                                            v-for="v in p.variants"
-                                            :key="v.id"
-                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 text-[11px]"
-                                            :class="v.current_stock <= 5 ? 'text-rose-400 font-bold border-rose-900/50' : 'text-slate-300'"
-                                        >
-                                            <strong>{{ v.size }}:</strong> {{ v.current_stock }}
-                                        </span>
-                                    </div>
+                                <td class="p-4 sm:p-5 text-center whitespace-nowrap">
+                                    <span
+                                        :class="[
+                                            'font-mono font-black text-sm px-2.5 py-1 rounded-xl border',
+                                            p.variants.reduce((acc, curr) => acc + curr.current_stock, 0) <= 5
+                                                ? 'bg-rose-950/30 text-rose-400 border-rose-900/60'
+                                                : 'bg-slate-950 text-white border-slate-800'
+                                        ]"
+                                    >
+                                        {{ p.variants.reduce((acc, curr) => acc + curr.current_stock, 0) }} pcs
+                                    </span>
                                 </td>
-                                <td class="p-4 sm:p-5 text-center whitespace-nowrap font-mono font-extrabold text-sm text-white">
-                                    {{ p.variants.reduce((acc, curr) => acc + curr.current_stock, 0) }} pcs
-                                </td>
-                                <td v-if="isOwner" class="p-4 sm:p-5 text-right whitespace-nowrap font-mono text-xs text-emerald-400">
-                                    {{ showHpp ? formatRupiah(p.cost_price) : 'Rp ••••••••' }}
-                                </td>
-                                <td class="p-4 sm:p-5 text-right whitespace-nowrap font-mono font-bold text-sm text-white">
+                                <td class="p-4 sm:p-5 text-right whitespace-nowrap font-mono font-bold text-sm text-amber-400">
                                     {{ formatRupiah(p.selling_price) }}
                                 </td>
-                                <td class="p-4 sm:p-5 text-center whitespace-nowrap space-x-2">
+                                <td class="p-4 sm:p-5 text-center whitespace-nowrap space-x-1.5">
+                                    <!-- Tombol Detail 3D (Halaman Khusus) -->
+                                    <Link
+                                        :href="route('warehouse.products.show', p.id)"
+                                        class="px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500 text-purple-300 hover:text-slate-950 text-xs font-bold border border-purple-500/30 hover:border-purple-400 transition inline-flex items-center gap-1 shadow-sm"
+                                        title="Buka Tampilan Detail 3D"
+                                    >
+                                        <span>👁️ Detail 3D</span>
+                                    </Link>
                                     <Link
                                         :href="route('warehouse.products.edit', p.id)"
-                                        class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+                                        class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition inline-block"
+                                        title="Edit Data Produk"
                                     >
                                         ✏️ Edit
                                     </Link>
                                     <button
                                         @click="deleteProduct(p)"
-                                        class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-rose-500/15 hover:text-rose-400 text-slate-500 text-xs font-semibold border border-slate-800 hover:border-rose-500/30 transition cursor-pointer"
+                                        class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-rose-500/15 text-slate-500 hover:text-rose-400 text-xs font-semibold border border-slate-800 hover:border-rose-500/30 transition cursor-pointer"
+                                        title="Hapus Produk"
                                     >
                                         🗑️
                                     </button>
@@ -189,7 +185,7 @@ const deleteProduct = (product) => {
                             </tr>
 
                             <tr v-if="products.data.length === 0">
-                                <td :colspan="isOwner ? 7 : 6" class="p-10 text-center text-slate-500">
+                                <td colspan="5" class="p-10 text-center text-slate-500">
                                     Belum ada artikel produk yang cocok dengan pencarian.
                                 </td>
                             </tr>

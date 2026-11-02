@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\StockMovement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -92,6 +93,36 @@ class ProductController extends Controller
 
         return redirect()->route('warehouse.products.index')
             ->with('success', "Artikel '{$product->name}' berhasil ditambahkan ke Master Data.");
+    }
+
+    public function show(Product $product, Request $request): Response
+    {
+        $user = $request->user();
+        $isOwner = $user->isOwner();
+
+        $product->load([
+            'category',
+            'variants' => function ($q) {
+                $q->orderBy('id');
+            },
+        ]);
+
+        // Muat riwayat mutasi stok untuk produk ini
+        $variantIds = $product->variants->pluck('id');
+        $movements = StockMovement::with(['variant', 'user'])
+            ->whereIn('product_variant_id', $variantIds)
+            ->latest()
+            ->take(8)
+            ->get();
+
+        $totalStock = (int) $product->variants->sum('current_stock');
+
+        return Inertia::render('Warehouse/Products/Show', [
+            'product' => $product,
+            'movements' => $movements,
+            'totalStock' => $totalStock,
+            'isOwner' => $isOwner,
+        ]);
     }
 
     public function edit(Product $product): Response
