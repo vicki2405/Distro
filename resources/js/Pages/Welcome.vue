@@ -31,23 +31,11 @@ defineProps({
                 </div>
             </div>
 
-            <!-- Single Focus Link (Bukan Tombol Ganda) -->
-            <nav v-if="canLogin">
-                <Link
-                    v-if="$page.props.auth.user"
-                    :href="route('warehouse.dashboard')"
-                    class="text-xs font-bold px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-800 hover:border-amber-500/40 transition-all duration-200"
-                >
-                    Dashboard →
-                </Link>
-                <Link
-                    v-else
-                    :href="route('login')"
-                    class="text-xs font-bold px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700 transition-all duration-200"
-                >
-                    Masuk Akun
-                </Link>
-            </nav>
+            <!-- Informasi Status Sistem (Tanpa Tombol Ganda) -->
+            <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span>SYSTEM ONLINE</span>
+            </div>
         </header>
 
         <!-- 3. HERO UTAMA BERANIMASI -->
