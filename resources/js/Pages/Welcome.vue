@@ -3,6 +3,10 @@ import { Head, Link } from '@inertiajs/vue3';
 
 defineProps({
     canLogin: Boolean,
+    featuredProducts: {
+        type: Array,
+        default: () => [],
+    },
 });
 </script>
 
@@ -113,6 +117,56 @@ defineProps({
                                 <span class="text-slate-200">Kirim Toko Distro: Hoodie Boxy "Onyx Heavy" (XL)</span>
                             </div>
                             <span class="text-amber-400 font-bold">-12 pcs</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SHOWCASE FOTO PRODUK DISTRO TERBARU -->
+            <div v-if="featuredProducts && featuredProducts.length > 0" class="pt-2 space-y-3">
+                <div class="flex items-center justify-between max-w-2xl mx-auto px-1">
+                    <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                        Katalog Produk Terdaftar
+                    </span>
+                    <span class="text-[11px] font-mono text-purple-400">
+                        Live Inventory
+                    </span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto text-left">
+                    <div
+                        v-for="p in featuredProducts"
+                        :key="p.id"
+                        class="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800/90 hover:border-purple-500/40 transition-all duration-300 space-y-2.5 flex flex-col justify-between"
+                    >
+                        <div class="space-y-2">
+                            <div class="w-full h-28 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden">
+                                <img
+                                    v-if="p.image_url"
+                                    :src="p.image_url"
+                                    :alt="p.name"
+                                    class="w-full h-full object-cover"
+                                />
+                                <div v-else class="flex flex-col items-center justify-center text-slate-600 gap-1">
+                                    <span class="text-xl">👕</span>
+                                    <span class="text-[9px] font-mono uppercase tracking-wider">Foto Produk</span>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
+                                    {{ p.category?.name }}
+                                </span>
+                                <h4 class="text-xs font-bold text-white mt-1 line-clamp-1">
+                                    {{ p.name }}
+                                </h4>
+                            </div>
+                        </div>
+                        <div class="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+                            <span class="text-amber-400 font-extrabold font-mono">
+                                Rp {{ Number(p.selling_price).toLocaleString('id-ID') }}
+                            </span>
+                            <span class="text-slate-400 font-mono text-[10px]">
+                                {{ p.variants?.reduce((sum, v) => sum + (v.current_stock || 0), 0) }} pcs
+                            </span>
                         </div>
                     </div>
                 </div>

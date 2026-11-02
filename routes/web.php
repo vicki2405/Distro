@@ -7,6 +7,7 @@ use App\Http\Controllers\StockInController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\StockOutController;
 use App\Http\Controllers\WarehouseDashboardController;
+use App\Models\Product;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -16,9 +17,14 @@ Route::get('/', function () {
         return redirect()->route('warehouse.dashboard');
     }
 
+    $featuredProducts = Product::with(['category', 'variants' => function ($q) {
+        $q->orderBy('id');
+    }])->latest()->take(3)->get();
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
+        'featuredProducts' => $featuredProducts,
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);

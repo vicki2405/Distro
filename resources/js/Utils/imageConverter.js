@@ -101,3 +101,4 @@ export const convertAndCompressImage = (file, maxWidth = 1200, maxHeight = 1200,
         };
     });
 };
+

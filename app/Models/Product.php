@@ -33,7 +33,7 @@ class Product extends Model
 
         return str_starts_with($this->image, 'http')
             ? $this->image
-            : asset('storage/'.$this->image);
+            : '/storage/'.$this->image;
     }
 
     protected function casts(): array

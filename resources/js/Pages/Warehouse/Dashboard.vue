@@ -183,18 +183,31 @@ const formatTime = (isoString) => {
                             :key="product.id"
                             class="p-5 sm:p-6 hover:bg-slate-800/30 transition"
                         >
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60">
-                                            {{ product.category?.name }}
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3.5">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-14 h-14 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                                        <img
+                                            v-if="product.image_url"
+                                            :src="product.image_url"
+                                            :alt="product.name"
+                                            class="w-full h-full object-cover"
+                                        />
+                                        <span v-else class="text-slate-600 font-mono text-[10px] font-bold">
+                                            NO FOTO
                                         </span>
                                     </div>
-                                    <h4 class="font-bold text-white text-base mt-2">
-                                        {{ product.name }}
-                                    </h4>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60">
+                                                {{ product.category?.name }}
+                                            </span>
+                                        </div>
+                                        <h4 class="font-bold text-white text-base mt-1.5">
+                                            {{ product.name }}
+                                        </h4>
+                                    </div>
                                 </div>
-                                <div class="text-left sm:text-right">
+                                <div class="text-left sm:text-right shrink-0">
                                     <div class="text-[11px] text-slate-400">Harga Retail</div>
                                     <div class="text-base font-extrabold text-white">
                                         {{ formatRupiah(product.selling_price) }}
