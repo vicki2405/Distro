@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Product3DViewer from '@/Components/Product3DViewer.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -29,73 +30,6 @@ const profitMargin = computed(() => {
         percentage: percentage,
     };
 });
-
-// 3D Interactive Card Showcase Engine
-const cardRef = ref(null);
-const rotateX = ref(0);
-const rotateY = ref(0);
-const glareX = ref(50);
-const glareY = ref(50);
-const glareOpacity = ref(0);
-const isHovering = ref(false);
-const activeAngle = ref('front');
-
-const handleMouseMove = (e) => {
-    if (!cardRef.value) return;
-    const rect = cardRef.value.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    // Maksimal kemiringan rotasi 18 derajat
-    rotateX.value = -((y - centerY) / centerY) * 18;
-    rotateY.value = ((x - centerX) / centerX) * 18;
-
-    glareX.value = (x / rect.width) * 100;
-    glareY.value = (y / rect.height) * 100;
-    glareOpacity.value = 0.45;
-    isHovering.value = true;
-};
-
-const handleMouseLeave = () => {
-    isHovering.value = false;
-    glareOpacity.value = 0;
-    resetPerspective();
-};
-
-const setAngle = (angle) => {
-    activeAngle.value = angle;
-    if (angle === 'left') {
-        rotateX.value = 6;
-        rotateY.value = -22;
-        glareOpacity.value = 0.25;
-        glareX.value = 25;
-        glareY.value = 35;
-    } else if (angle === 'right') {
-        rotateX.value = 6;
-        rotateY.value = 22;
-        glareOpacity.value = 0.25;
-        glareX.value = 75;
-        glareY.value = 35;
-    } else if (angle === 'top') {
-        rotateX.value = -18;
-        rotateY.value = 0;
-        glareOpacity.value = 0.3;
-        glareX.value = 50;
-        glareY.value = 15;
-    } else {
-        resetPerspective();
-    }
-};
-
-const resetPerspective = () => {
-    activeAngle.value = 'front';
-    rotateX.value = 0;
-    rotateY.value = 0;
-    glareOpacity.value = 0;
-};
 
 // Modal Foto Bukti Mutasi
 const selectedProofImage = ref(null);
@@ -151,176 +85,27 @@ const closeProofModal = () => {
 
         <div class="max-w-7xl mx-auto space-y-6">
 
-            <!-- MAIN GRID: 3D SHOWCASE (KIRI) & INFORMASI LENGKAP (KANAN) -->
+            <!-- MAIN GRID: 3D THREE.JS SHOWCASE (KIRI) & INFORMASI LENGKAP (KANAN) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                <!-- 1. 3D INTERACTIVE PRODUCT SHOWCASE (KOLOM KIRI - 5 Kolom) -->
+                <!-- 1. TRUE 3D WEBGL INTERACTIVE PRODUCT VIEWER (KOLOM KIRI - 5 Kolom) -->
                 <div class="lg:col-span-5 space-y-4">
-                    <div class="bg-slate-900/70 backdrop-blur-md rounded-3xl border border-slate-800/80 p-6 shadow-2xl relative overflow-hidden group">
-                        
-                        <!-- Ambient Light Mesh Background -->
-                        <div class="absolute -top-20 -left-20 w-60 h-60 bg-purple-500/15 rounded-full blur-3xl pointer-events-none"></div>
-                        <div class="absolute -bottom-20 -right-20 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                    <Product3DViewer
+                        :image-url="product.image_url"
+                        :product-name="product.name"
+                        :category-name="product.category?.name"
+                    />
 
-                        <!-- Header Kartu 3D -->
-                        <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 relative z-10">
-                            <div class="flex items-center gap-2">
-                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                                <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-300">
-                                    3D Interactive Showcase
-                                </span>
-                            </div>
-                            <span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-slate-950 text-slate-400 border border-slate-800">
-                                Hover / Gerakkan Mouse
-                            </span>
-                        </div>
-
-                        <!-- 3D STAGE & PEDESTAL CANVAS -->
-                        <div
-                            class="py-6 flex items-center justify-center relative perspective-[1200px]"
-                            @mousemove="handleMouseMove"
-                            @mouseleave="handleMouseLeave"
-                        >
-                            <!-- Kartu 3D yang Berotasi Mengikuti Kursor -->
-                            <div
-                                ref="cardRef"
-                                class="w-full max-w-[340px] aspect-[4/5] rounded-3xl p-4 bg-gradient-to-b from-slate-900 via-slate-950 to-black border border-slate-700/80 relative shadow-2xl cursor-grab active:cursor-grabbing transition-transform duration-100 ease-out preserve-3d"
-                                :style="{
-                                    transform: `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`,
-                                }"
-                            >
-                                <!-- Dynamic Specular Glare (Pantulan Cahaya Bergerak) -->
-                                <div
-                                    class="absolute inset-0 rounded-3xl pointer-events-none transition-opacity duration-200 z-30"
-                                    :style="{
-                                        opacity: glareOpacity,
-                                        background: `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 45%, transparent 70%)`
-                                    }"
-                                ></div>
-
-                                <!-- Floating 3D Badge: Kategori (TranslateZ Layer) -->
-                                <div
-                                    class="absolute top-4 left-4 z-20 transition-transform duration-150"
-                                    :style="{ transform: 'translateZ(30px)' }"
-                                >
-                                    <span class="px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-slate-900/90 text-amber-400 border border-amber-500/30 backdrop-blur-md shadow-lg shadow-black/50">
-                                        {{ product.category?.name }}
-                                    </span>
-                                </div>
-
-                                <!-- Floating 3D Badge: Stok Status (TranslateZ Layer) -->
-                                <div
-                                    class="absolute top-4 right-4 z-20 transition-transform duration-150"
-                                    :style="{ transform: 'translateZ(25px)' }"
-                                >
-                                    <span
-                                        :class="[
-                                            'px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold tracking-wide backdrop-blur-md shadow-lg',
-                                            totalStock > 10
-                                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                                                : totalStock > 0
-                                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                                                : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                                        ]"
-                                    >
-                                        {{ totalStock > 0 ? `${totalStock} pcs Ready` : 'Stok Kosong' }}
-                                    </span>
-                                </div>
-
-                                <!-- Frame Gambar Produk Asli -->
-                                <div class="w-full h-full rounded-2xl overflow-hidden bg-slate-950/80 border border-slate-800 flex items-center justify-center relative">
-                                    <img
-                                        v-if="product.image_url"
-                                        :src="product.image_url"
-                                        :alt="product.name"
-                                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                    />
-                                    <!-- Fallback jika belum upload foto -->
-                                    <div v-else class="flex flex-col items-center justify-center text-center p-6 space-y-3">
-                                        <div class="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-3xl">
-                                            👕
-                                        </div>
-                                        <div>
-                                            <div class="text-sm font-bold text-slate-200">Belum Ada Foto Produk</div>
-                                            <div class="text-[11px] text-slate-500 mt-1">Upload foto di menu Edit Produk untuk melihat tampilan 3D nyata.</div>
-                                        </div>
-                                        <Link
-                                            :href="route('warehouse.products.edit', product.id)"
-                                            class="text-xs font-bold text-purple-400 hover:text-purple-300 underline pt-1"
-                                        >
-                                            + Upload Foto Sekarang
-                                        </Link>
-                                    </div>
-
-                                    <!-- Bottom Gradient Shadow -->
-                                    <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent pointer-events-none"></div>
-
-                                    <!-- Floating 3D Title Overlay (TranslateZ Layer) -->
-                                    <div
-                                        class="absolute bottom-4 inset-x-4 z-20 transition-transform duration-150"
-                                        :style="{ transform: 'translateZ(35px)' }"
-                                    >
-                                        <div class="text-xs font-black text-white truncate drop-shadow-md">
-                                            {{ product.name }}
-                                        </div>
-                                        <div class="text-[10px] font-mono text-slate-400">
-                                            Katalog Master Distro
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Pedestal 3D Floor Shadow -->
-                        <div class="w-48 h-4 mx-auto bg-black/60 rounded-full blur-md"></div>
-
-                        <!-- 3D Perspective Preset Controls -->
-                        <div class="pt-4 border-t border-slate-800/80 flex items-center justify-center gap-2">
-                            <span class="text-[10px] font-mono text-slate-500 mr-1">SUDUT 3D:</span>
-                            <button
-                                type="button"
-                                @click="setAngle('left')"
-                                :class="[
-                                    'px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition cursor-pointer border',
-                                    activeAngle === 'left'
-                                        ? 'bg-purple-500 text-slate-950 border-purple-400 shadow'
-                                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-                                ]"
-                            >
-                                ◖ Kiri
-                            </button>
-                            <button
-                                type="button"
-                                @click="setAngle('front')"
-                                :class="[
-                                    'px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition cursor-pointer border',
-                                    activeAngle === 'front'
-                                        ? 'bg-purple-500 text-slate-950 border-purple-400 shadow'
-                                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-                                ]"
-                            >
-                                ● Depan
-                            </button>
-                            <button
-                                type="button"
-                                @click="setAngle('right')"
-                                :class="[
-                                    'px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition cursor-pointer border',
-                                    activeAngle === 'right'
-                                        ? 'bg-purple-500 text-slate-950 border-purple-400 shadow'
-                                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-                                ]"
-                            >
-                                Kanan ◗
-                            </button>
-                            <button
-                                type="button"
-                                @click="resetPerspective"
-                                class="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 cursor-pointer"
-                                title="Reset Posisi Tegak"
-                            >
-                                ↺ Reset
-                            </button>
+                    <!-- FOTO FISIK ASLI 2D (SOURCE ASLI) -->
+                    <div v-if="product.image_url" class="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 flex items-center gap-3.5 shadow-md">
+                        <img
+                            :src="product.image_url"
+                            :alt="product.name"
+                            class="w-14 h-14 object-cover rounded-xl border border-slate-700 shadow-sm"
+                        />
+                        <div>
+                            <div class="text-xs font-bold text-white">Foto Fisik Asli Produk (2D)</div>
+                            <div class="text-[11px] text-slate-400">Tekstur asli pakaian yang dipetakan ke permukaan model 3D di atas.</div>
                         </div>
                     </div>
                 </div>
