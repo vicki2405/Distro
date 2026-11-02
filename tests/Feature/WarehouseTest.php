@@ -222,6 +222,57 @@ class WarehouseTest extends TestCase
         Storage::disk('public')->assertMissing($oldImagePath);
     }
 
+    public function test_can_upload_and_manage_multiple_gallery_photos(): void
+    {
+        Storage::fake('public');
+
+        $imgFront = UploadedFile::fake()->image('depan.webp', 800, 800);
+        $imgBack = UploadedFile::fake()->image('belakang.webp', 800, 800);
+        $imgLeft = UploadedFile::fake()->image('kiri.webp', 800, 800);
+        $imgRight = UploadedFile::fake()->image('kanan.webp', 800, 800);
+        $imgDetail = UploadedFile::fake()->image('detail.webp', 800, 800);
+
+        // Store with 5 photos
+        $response = $this->actingAs($this->owner)->post(route('warehouse.products.store'), [
+            'name' => 'Jaket Coach Vintage',
+            'category_id' => $this->category->id,
+            'cost_price' => 120000,
+            'selling_price' => 280000,
+            'description' => 'Taslan waterproof',
+            'images' => [$imgFront, $imgBack, $imgLeft, $imgRight, $imgDetail],
+            'image_labels' => ['Tampak Depan', 'Tampak Belakang', 'Samping Kiri', 'Samping Kanan', 'Detail Kancing'],
+            'sizes' => ['M', 'L', 'XL'],
+        ]);
+
+        $response->assertRedirect(route('warehouse.products.index'));
+
+        $product = Product::where('name', 'Jaket Coach Vintage')->firstOrFail();
+        $this->assertCount(5, $product->images);
+        $this->assertNotNull($product->image);
+
+        // Show page loads gallery
+        $showResponse = $this->actingAs($this->staff)->get(route('warehouse.products.show', $product->id));
+        $showResponse->assertOk();
+
+        // Update: delete 1 photo, add another
+        $deletedImgId = $product->images->first()->id;
+        $imgNewExtra = UploadedFile::fake()->image('extra.webp', 800, 800);
+
+        $updateResponse = $this->actingAs($this->owner)->put(route('warehouse.products.update', $product->id), [
+            'name' => 'Jaket Coach Vintage',
+            'category_id' => $this->category->id,
+            'selling_price' => 280000,
+            'deleted_image_ids' => [$deletedImgId],
+            'images' => [$imgNewExtra],
+            'image_labels' => ['Foto Tambahan'],
+        ]);
+
+        $updateResponse->assertRedirect(route('warehouse.products.index'));
+        $product->refresh();
+        $this->assertCount(5, $product->images); // 5 - 1 + 1 = 5
+        $this->assertDatabaseMissing('product_images', ['id' => $deletedImgId]);
+    }
+
     public function test_cannot_delete_product_with_existing_stock_movements(): void
     {
         // Catat mutasi untuk produk

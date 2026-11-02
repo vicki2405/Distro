@@ -16,76 +16,86 @@ const form = useForm({
     selling_price: '',
     description: '',
     image: null,
+    images: [],
+    image_labels: [],
     sizes: [...props.defaultSizes],
 });
 
 const availableSizes = ref([...props.defaultSizes, '3XL', 'ALL_SIZE']);
 const customSizeInput = ref('');
 
-// State Upload & Konversi Gambar
+// State Upload & Konversi Multi-Foto
 const fileInputRef = ref(null);
-const imagePreview = ref(null);
-const conversionStats = ref(null);
+const newPhotos = ref([]);
 const isConverting = ref(false);
 const conversionError = ref(null);
 const isDragging = ref(false);
 
-const processFile = async (file) => {
-    if (!file) return;
+const anglePresets = ['Tampak Depan', 'Tampak Belakang', 'Samping Kiri', 'Samping Kanan', 'Detail Sablon / Bahan'];
 
-    if (!file.type.startsWith('image/')) {
-        conversionError.value = 'File yang dipilih harus berupa file gambar (JPG, PNG, WEBP, dll).';
-        return;
-    }
-
+const processMultipleFiles = async (files) => {
+    if (!files || files.length === 0) return;
     conversionError.value = null;
     isConverting.value = true;
 
-    try {
-        const result = await convertAndCompressImage(file, 1200, 1200, 0.85);
-        form.image = result.file;
-        imagePreview.value = result.previewUrl;
-        conversionStats.value = {
-            originalSize: result.formattedOriginalSize,
-            convertedSize: result.formattedConvertedSize,
-            savedPercentage: result.savedPercentage,
-            fileName: result.file.name,
-        };
-    } catch (err) {
-        conversionError.value = err.message || 'Terjadi kesalahan saat memproses gambar.';
-    } finally {
-        isConverting.value = false;
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.type.startsWith('image/')) continue;
+
+        try {
+            const result = await convertAndCompressImage(file, 1200, 1200, 0.85);
+            const defaultLabel = anglePresets[newPhotos.value.length % anglePresets.length] || `Foto ${newPhotos.value.length + 1}`;
+
+            newPhotos.value.push({
+                file: result.file,
+                previewUrl: result.previewUrl,
+                label: defaultLabel,
+                size: result.formattedConvertedSize,
+                saved: result.savedPercentage,
+            });
+        } catch (err) {
+            conversionError.value = err.message || 'Gagal mengompresi gambar.';
+        }
+    }
+
+    syncFormPhotos();
+    isConverting.value = false;
+};
+
+const syncFormPhotos = () => {
+    form.images = newPhotos.value.map(p => p.file);
+    form.image_labels = newPhotos.value.map(p => p.label);
+    if (newPhotos.value.length > 0) {
+        form.image = newPhotos.value[0].file;
+    } else {
+        form.image = null;
     }
 };
 
+const removeNewPhoto = (idx) => {
+    newPhotos.value.splice(idx, 1);
+    syncFormPhotos();
+};
+
 const handleFileInputChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        processFile(file);
+    const files = event.target.files;
+    if (files && files.length > 0) {
+        processMultipleFiles(Array.from(files));
     }
+    if (fileInputRef.value) fileInputRef.value.value = '';
 };
 
 const handleDrop = (event) => {
     isDragging.value = false;
-    const file = event.dataTransfer.files[0];
-    if (file) {
-        processFile(file);
+    const files = event.dataTransfer.files;
+    if (files && files.length > 0) {
+        processMultipleFiles(Array.from(files));
     }
 };
 
 const triggerFileInput = () => {
     if (fileInputRef.value) {
         fileInputRef.value.click();
-    }
-};
-
-const removeImage = () => {
-    form.image = null;
-    imagePreview.value = null;
-    conversionStats.value = null;
-    conversionError.value = null;
-    if (fileInputRef.value) {
-        fileInputRef.value.value = '';
     }
 };
 
@@ -110,6 +120,7 @@ const addCustomSize = () => {
 };
 
 const submit = () => {
+    syncFormPhotos();
     form.post(route('warehouse.products.store'), {
         forceFormData: true,
     });
@@ -127,7 +138,7 @@ const submit = () => {
                         Pendaftaran Produk Baru (Master Data)
                     </h2>
                     <p class="text-xs text-slate-400 mt-0.5">
-                        Daftarkan nama artikel, kategori, foto produk resmi, harga, dan varian ukuran ke dalam katalog distro.
+                        Daftarkan nama artikel, kategori, foto produk resmi (bisa multi-sudut), harga, dan varian ukuran ke dalam katalog distro.
                     </p>
                 </div>
                 <Link
@@ -229,34 +240,74 @@ const submit = () => {
                     </div>
                 </div>
 
-                <!-- 2. UPLOAD & AUTO-CONVERT FOTO PRODUK -->
+                <!-- 2. UPLOAD & AUTO-CONVERT FOTO PRODUK (OPSIONAL MULTI-FOTO) -->
                 <div class="p-6 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-4">
                     <div class="flex items-center justify-between">
                         <div>
                             <h3 class="text-xs font-black uppercase tracking-wider text-purple-400 flex items-center gap-2">
-                                <span>2. Foto Produk</span>
+                                <span>2. Galeri Foto Produk</span>
                                 <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                                    Auto Convert & Compress WebP
+                                    Multi-Sudut Opsional
                                 </span>
                             </h3>
                             <p class="text-[11px] text-slate-400 mt-0.5">
-                                Unggah foto pakaian atau produk distro. File kamera HP atau resolusi besar akan otomatis dikompresi ringan tanpa penurunan kualitas.
+                                Unggah foto produk (bisa lebih dari 4 foto: Depan, Belakang, Samping Kiri, Kanan, dll). Foto otomatis dikompresi ringan tanpa penurunan kualitas.
                             </p>
                         </div>
                     </div>
 
-                    <!-- Hidden Native File Input -->
+                    <!-- Hidden Native Multiple File Input -->
                     <input
                         ref="fileInputRef"
                         type="file"
+                        multiple
                         accept="image/jpeg,image/png,image/webp,image/jpg"
                         class="hidden"
                         @change="handleFileInputChange"
                     />
 
+                    <!-- LIST FOTO YANG AKAN DIUNGGAH -->
+                    <div v-if="newPhotos.length > 0" class="space-y-2">
+                        <div class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+                            Daftar Foto yang Dipilih ({{ newPhotos.length }} Foto):
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div
+                                v-for="(photo, idx) in newPhotos"
+                                :key="idx"
+                                class="p-3 rounded-xl bg-slate-900 border border-emerald-500/30 flex items-center gap-3"
+                            >
+                                <img
+                                    :src="photo.previewUrl"
+                                    alt="Preview"
+                                    class="w-16 h-16 object-contain rounded-lg bg-black/50 shrink-0"
+                                />
+                                <div class="flex-1 space-y-1.5">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[10px] font-mono text-emerald-400 font-bold">
+                                            {{ photo.size }} • Hemat {{ photo.saved }}%
+                                        </span>
+                                        <button
+                                            type="button"
+                                            @click="removeNewPhoto(idx)"
+                                            class="text-rose-400 hover:text-rose-300 text-xs font-bold cursor-pointer"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                    <input
+                                        v-model="photo.label"
+                                        type="text"
+                                        placeholder="Label (contoh: Tampak Depan)"
+                                        class="w-full text-xs py-1 px-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Dropzone / Upload Area -->
                     <div
-                        v-if="!imagePreview"
                         @dragover.prevent="isDragging = true"
                         @dragleave.prevent="isDragging = false"
                         @drop.prevent="handleDrop"
@@ -274,84 +325,21 @@ const submit = () => {
                         </div>
                         <template v-else>
                             <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-xl">
-                                📷
+                                📸
                             </div>
                             <div class="space-y-1">
                                 <div class="text-xs font-bold text-slate-200">
-                                    Klik untuk memilih foto atau seret ke sini
+                                    Klik atau seret foto-foto pakaian ke sini (Bisa pilih banyak sekaligus)
                                 </div>
                                 <div class="text-[11px] text-slate-500">
-                                    Mendukung JPG, PNG, WEBP (Otomatis dioptimalkan)
+                                    Contoh: Tampak Depan, Belakang, Samping Kiri, Kanan, Detail Jahitan (Format JPG, PNG, WEBP)
                                 </div>
                             </div>
                         </template>
                     </div>
 
-                    <!-- Image Preview & Conversion Stats -->
-                    <div v-else class="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl bg-slate-900/90 border border-slate-800">
-                        <div class="relative group">
-                            <img
-                                :src="imagePreview"
-                                alt="Preview Foto Produk"
-                                class="w-24 h-24 object-cover rounded-xl border border-slate-700 shadow-md"
-                            />
-                            <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition rounded-xl flex items-center justify-center">
-                                <button
-                                    type="button"
-                                    @click="triggerFileInput"
-                                    class="text-[10px] font-bold text-white bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded"
-                                >
-                                    Ganti
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="flex-1 space-y-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold text-white truncate max-w-[200px] sm:max-w-xs font-mono">
-                                    {{ conversionStats?.fileName }}
-                                </span>
-                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                                    Siap Diupload
-                                </span>
-                            </div>
-
-                            <!-- Statistik Kompresi -->
-                            <div class="flex flex-wrap items-center gap-3 text-[11px] font-mono">
-                                <span class="text-slate-400">
-                                    Ukuran Awal: <span class="text-slate-300 font-bold">{{ conversionStats?.originalSize }}</span>
-                                </span>
-                                <span class="text-slate-500">→</span>
-                                <span class="text-slate-400">
-                                    Setelah Dikonversi: <span class="text-purple-400 font-bold">{{ conversionStats?.convertedSize }}</span>
-                                </span>
-                                <span v-if="conversionStats?.savedPercentage > 0" class="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                                    Hemat {{ conversionStats?.savedPercentage }}%
-                                </span>
-                            </div>
-
-                            <div class="flex items-center gap-2 pt-1">
-                                <button
-                                    type="button"
-                                    @click="triggerFileInput"
-                                    class="text-xs font-medium text-slate-300 hover:text-white underline cursor-pointer"
-                                >
-                                    Ganti Foto
-                                </button>
-                                <span class="text-slate-600">•</span>
-                                <button
-                                    type="button"
-                                    @click="removeImage"
-                                    class="text-xs font-medium text-rose-400 hover:text-rose-300 cursor-pointer"
-                                >
-                                    Hapus Foto
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div v-if="conversionError || form.errors.image" class="text-xs text-rose-400 font-semibold mt-1">
-                        {{ conversionError || form.errors.image }}
+                    <div v-if="conversionError" class="text-xs text-rose-400 font-semibold mt-1">
+                        {{ conversionError }}
                     </div>
                 </div>
 
