@@ -27,13 +27,17 @@ class Product extends Model
 
     public function getImageUrlAttribute(): ?string
     {
-        if (! $this->image) {
-            return null;
+        if ($this->image) {
+            return str_starts_with($this->image, 'http')
+                ? $this->image
+                : '/storage/'.$this->image;
         }
 
-        return str_starts_with($this->image, 'http')
-            ? $this->image
-            : '/storage/'.$this->image;
+        if ($this->relationLoaded('images') && $this->images->isNotEmpty()) {
+            return $this->images->first()->url;
+        }
+
+        return null;
     }
 
     protected function casts(): array
@@ -52,5 +56,10 @@ class Product extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class);
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('order')->orderBy('id');
     }
 }

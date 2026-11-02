@@ -6,6 +6,7 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use Illuminate\Http\RedirectResponse;
@@ -80,6 +81,25 @@ class ProductController extends Controller
             'image' => $imagePath,
         ]);
 
+        // Simpan galeri multi-foto jika diupload (Depan, Belakang, Kiri, Kanan, dll)
+        if ($request->hasFile('images')) {
+            $labels = $request->input('image_labels', []);
+            foreach ($request->file('images') as $idx => $imgFile) {
+                $path = $imgFile->store('products', 'public');
+                $label = $labels[$idx] ?? null;
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'image_path' => $path,
+                    'label' => $label,
+                    'order' => $idx,
+                ]);
+
+                if (! $product->image && $idx === 0) {
+                    $product->update(['image' => $path]);
+                }
+            }
+        }
+
         // Inisialisasi varian ukuran ke database dengan stok awal 0
         foreach ($validated['sizes'] as $size) {
             $cleanSize = strtoupper(trim($size));
@@ -102,6 +122,7 @@ class ProductController extends Controller
 
         $product->load([
             'category',
+            'images',
             'variants' => function ($q) {
                 $q->orderBy('id');
             },
@@ -127,7 +148,7 @@ class ProductController extends Controller
 
     public function edit(Product $product): Response
     {
-        $product->load(['category', 'variants']);
+        $product->load(['category', 'variants', 'images']);
         $categories = Category::orderBy('name')->get();
 
         return Inertia::render('Warehouse/Products/Edit', [
@@ -156,6 +177,40 @@ class ProductController extends Controller
         }
 
         $product->update($updateData);
+
+        // Hapus foto galeri yang ditandai untuk dihapus
+        if (! empty($validated['deleted_image_ids'])) {
+            $deletedImages = ProductImage::where('product_id', $product->id)
+                ->whereIn('id', $validated['deleted_image_ids'])
+                ->get();
+
+            foreach ($deletedImages as $delImg) {
+                if (Storage::disk('public')->exists($delImg->image_path)) {
+                    Storage::disk('public')->delete($delImg->image_path);
+                }
+                $delImg->delete();
+            }
+        }
+
+        // Simpan foto galeri multi-foto baru jika diupload
+        if ($request->hasFile('images')) {
+            $existingCount = $product->images()->count();
+            $labels = $request->input('image_labels', []);
+            foreach ($request->file('images') as $idx => $imgFile) {
+                $path = $imgFile->store('products', 'public');
+                $label = $labels[$idx] ?? null;
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'image_path' => $path,
+                    'label' => $label,
+                    'order' => $existingCount + $idx,
+                ]);
+
+                if (! $product->image) {
+                    $product->update(['image' => $path]);
+                }
+            }
+        }
 
         // Tambah varian ukuran baru jika ada
         if (! empty($validated['new_sizes'])) {
@@ -187,6 +242,12 @@ class ProductController extends Controller
             return back()->withErrors([
                 'error' => "Artikel '{$product->name}' tidak dapat dihapus karena sudah memiliki riwayat mutasi stok audit abadi.",
             ]);
+        }
+
+        foreach ($product->images as $img) {
+            if (Storage::disk('public')->exists($img->image_path)) {
+                Storage::disk('public')->delete($img->image_path);
+            }
         }
 
         if ($product->image && Storage::disk('public')->exists($product->image)) {

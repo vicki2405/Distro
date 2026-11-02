@@ -20,6 +20,10 @@ class StoreProductRequest extends FormRequest
             'selling_price' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string', 'max:1000'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'images' => ['nullable', 'array'],
+            'images.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'image_labels' => ['nullable', 'array'],
+            'image_labels.*' => ['nullable', 'string', 'max:50'],
             'sizes' => ['required', 'array', 'min:1'],
             'sizes.*' => ['required', 'string', 'max:10'],
         ];

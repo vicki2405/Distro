@@ -1,11 +1,15 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 
 const props = defineProps({
     imageUrl: {
         type: String,
         default: null,
+    },
+    images: {
+        type: Array,
+        default: () => [],
     },
     productName: {
         type: String,
@@ -25,13 +29,44 @@ const props = defineProps({
     },
 });
 
+// Gabungkan semua foto (galeri multi-foto + foto utama)
+const galleryList = computed(() => {
+    const list = [];
+    if (props.imageUrl) {
+        list.push({
+            id: 'main',
+            url: props.imageUrl,
+            label: 'Foto Utama (Depan)',
+        });
+    }
+    if (props.images && props.images.length > 0) {
+        props.images.forEach((img, idx) => {
+            // Hindari duplikat jika url sama dengan foto utama
+            if (img.url !== props.imageUrl) {
+                list.push({
+                    id: img.id,
+                    url: img.url,
+                    label: img.label || `Sudut ${idx + 1}`,
+                });
+            }
+        });
+    }
+    return list;
+});
+
+const activeIndex = ref(0);
+const activeImage = computed(() => {
+    if (galleryList.value.length === 0) return null;
+    return galleryList.value[activeIndex.value] || galleryList.value[0];
+});
+
 const isZoomed = ref(false);
 const zoomX = ref(50);
 const zoomY = ref(50);
 const isLightboxOpen = ref(false);
 
 const handleMouseMove = (e) => {
-    if (!props.imageUrl) return;
+    if (!activeImage.value) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -40,7 +75,7 @@ const handleMouseMove = (e) => {
 };
 
 const handleMouseEnter = () => {
-    if (props.imageUrl) {
+    if (activeImage.value) {
         isZoomed.value = true;
     }
 };
@@ -62,10 +97,13 @@ const handleMouseLeave = () => {
                 <span class="text-xs font-mono font-bold uppercase tracking-wider text-white">
                     Studio Showcase
                 </span>
+                <span v-if="galleryList.length > 1" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-950 text-slate-400 border border-slate-800">
+                    {{ activeIndex + 1 }} / {{ galleryList.length }} Foto
+                </span>
             </div>
             <div class="flex items-center gap-2">
                 <button
-                    v-if="imageUrl"
+                    v-if="activeImage"
                     type="button"
                     @click="isLightboxOpen = true"
                     class="text-xs font-medium px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition cursor-pointer flex items-center gap-1.5"
@@ -78,7 +116,7 @@ const handleMouseLeave = () => {
                     :href="route('warehouse.products.edit', productId)"
                     class="text-xs font-medium px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-purple-400 hover:text-purple-300 border border-slate-800 transition"
                 >
-                    Ganti Foto
+                    + Kelola Foto
                 </Link>
             </div>
         </div>
@@ -89,13 +127,14 @@ const handleMouseLeave = () => {
             @mousemove="handleMouseMove"
             @mouseenter="handleMouseEnter"
             @mouseleave="handleMouseLeave"
-            @click="imageUrl ? (isLightboxOpen = true) : null"
+            @click="activeImage ? (isLightboxOpen = true) : null"
         >
-            <!-- FOTO PRODUK ASLI DENGAN LOUPE ZOOM -->
-            <template v-if="imageUrl">
+            <!-- FOTO AKTIF DENGAN LOUPE ZOOM -->
+            <template v-if="activeImage">
                 <div class="w-full h-full flex items-center justify-center p-6 sm:p-8">
                     <img
-                        :src="imageUrl"
+                        :key="activeImage.url"
+                        :src="activeImage.url"
                         :alt="productName"
                         class="max-w-full max-h-full object-contain rounded-2xl drop-shadow-2xl transition-transform duration-150 ease-out"
                         :style="{
@@ -112,8 +151,16 @@ const handleMouseLeave = () => {
                 >
                     <span class="text-[11px] font-mono text-slate-300 bg-slate-950/85 px-3.5 py-1 rounded-full border border-slate-800/90 backdrop-blur-md shadow-lg flex items-center gap-2">
                         <span>🔍</span>
-                        <span>Arahkan mouse untuk zoom detail sablon & jahitan</span>
+                        <span>Arahkan mouse untuk zoom detail kain & sablon</span>
                     </span>
+                </div>
+
+                <!-- Label Sudut Foto Aktif (Kiri Atas) -->
+                <div
+                    v-if="activeImage.label"
+                    class="absolute top-4 left-4 pointer-events-none px-2.5 py-1 rounded-lg bg-slate-950/85 border border-slate-800 text-amber-400 text-[10px] font-mono font-bold backdrop-blur-md shadow"
+                >
+                    {{ activeImage.label }}
                 </div>
 
                 <!-- Indikator Zoom Aktif (Kanan Atas) -->
@@ -133,7 +180,7 @@ const handleMouseLeave = () => {
                 <div>
                     <h4 class="text-sm font-bold text-white">Belum Ada Foto Produk</h4>
                     <p class="text-xs text-slate-400 mt-1 max-w-xs">
-                        Unggah foto artikel pakaian untuk menampilkan showcase resolusi tinggi di sini.
+                        Unggah foto artikel pakaian (Depan, Belakang, Kiri, Kanan) untuk menampilkan galeri di sini.
                     </p>
                 </div>
                 <Link
@@ -146,8 +193,44 @@ const handleMouseLeave = () => {
             </div>
         </div>
 
+        <!-- THUMBNAIL MULTI-FOTO GALLERY BAR (JIKA ADA LEBIH DARI 1 FOTO) -->
+        <div v-if="galleryList.length > 1" class="p-3 bg-slate-950 border-t border-slate-800/80">
+            <div class="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-2 px-1 flex items-center justify-between">
+                <span>Sudut Pandang Foto (Klik untuk melihat):</span>
+                <span class="text-slate-500">{{ galleryList.length }} Foto Tersedia</span>
+            </div>
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                <button
+                    v-for="(item, idx) in galleryList"
+                    :key="item.id"
+                    type="button"
+                    @click="activeIndex = idx"
+                    :class="[
+                        'shrink-0 p-1 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col items-center gap-1 group',
+                        activeIndex === idx
+                            ? 'bg-purple-500/15 border-purple-500 shadow-md shadow-purple-500/20'
+                            : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                    ]"
+                >
+                    <img
+                        :src="item.url"
+                        :alt="item.label"
+                        class="w-14 h-14 object-cover rounded-lg border border-slate-850"
+                    />
+                    <span
+                        :class="[
+                            'text-[9px] font-mono font-semibold max-w-[64px] truncate px-1',
+                            activeIndex === idx ? 'text-purple-300 font-bold' : 'text-slate-400'
+                        ]"
+                    >
+                        {{ item.label || `Foto ${idx + 1}` }}
+                    </span>
+                </button>
+            </div>
+        </div>
+
         <!-- FOOTER BADGES INFO -->
-        <div class="p-4 bg-slate-950 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono">
+        <div class="p-4 bg-slate-950/60 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono">
             <span class="text-slate-400">
                 Kategori: <strong class="text-white">{{ categoryName }}</strong>
             </span>
@@ -169,7 +252,7 @@ const handleMouseLeave = () => {
 
     <!-- LIGHTBOX MODAL RESOLUSI PENUH -->
     <div
-        v-if="isLightboxOpen && imageUrl"
+        v-if="isLightboxOpen && activeImage"
         class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 bg-slate-950/90 backdrop-blur-xl"
         @click.self="isLightboxOpen = false"
     >
@@ -177,7 +260,9 @@ const handleMouseLeave = () => {
             <div class="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div>
                     <h3 class="text-sm font-bold text-white">{{ productName }}</h3>
-                    <div class="text-[11px] font-mono text-slate-400">Foto Asli Resolusi Penuh</div>
+                    <div class="text-[11px] font-mono text-slate-400">
+                        {{ activeImage.label || 'Foto Resolusi Penuh' }}
+                    </div>
                 </div>
                 <button
                     type="button"
@@ -189,7 +274,7 @@ const handleMouseLeave = () => {
             </div>
             <div class="max-h-[75vh] overflow-hidden flex items-center justify-center rounded-2xl bg-black/60 p-4">
                 <img
-                    :src="imageUrl"
+                    :src="activeImage.url"
                     :alt="productName"
                     class="max-h-[70vh] w-auto object-contain rounded-xl shadow-2xl"
                 />

@@ -92,6 +92,7 @@ const closeProofModal = () => {
                 <div class="lg:col-span-5 space-y-4">
                     <ProductStudioViewer
                         :image-url="product.image_url"
+                        :images="product.images || []"
                         :product-name="product.name"
                         :category-name="product.category?.name"
                         :total-stock="totalStock"
