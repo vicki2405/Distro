@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Product3DViewer from '@/Components/Product3DViewer.vue';
+import ProductStudioViewer from '@/Components/ProductStudioViewer.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -42,7 +42,7 @@ const closeProofModal = () => {
 </script>
 
 <template>
-    <Head :title="`${product.name} — Detail Produk 3D`" />
+    <Head :title="`${product.name} — Detail Produk`" />
 
     <AuthenticatedLayout>
         <template #header>
@@ -85,29 +85,18 @@ const closeProofModal = () => {
 
         <div class="max-w-7xl mx-auto space-y-6">
 
-            <!-- MAIN GRID: 3D THREE.JS SHOWCASE (KIRI) & INFORMASI LENGKAP (KANAN) -->
+            <!-- MAIN GRID: STUDIO SHOWCASE (KIRI) & INFORMASI LENGKAP (KANAN) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                <!-- 1. TRUE 3D WEBGL INTERACTIVE PRODUCT VIEWER (KOLOM KIRI - 5 Kolom) -->
+                <!-- 1. STUDIO PRODUCT SHOWCASE DENGAN DEEP ZOOM (KOLOM KIRI - 5 Kolom) -->
                 <div class="lg:col-span-5 space-y-4">
-                    <Product3DViewer
+                    <ProductStudioViewer
                         :image-url="product.image_url"
                         :product-name="product.name"
                         :category-name="product.category?.name"
+                        :total-stock="totalStock"
+                        :product-id="product.id"
                     />
-
-                    <!-- FOTO FISIK ASLI 2D (SOURCE ASLI) -->
-                    <div v-if="product.image_url" class="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 flex items-center gap-3.5 shadow-md">
-                        <img
-                            :src="product.image_url"
-                            :alt="product.name"
-                            class="w-14 h-14 object-cover rounded-xl border border-slate-700 shadow-sm"
-                        />
-                        <div>
-                            <div class="text-xs font-bold text-white">Foto Fisik Asli Produk (2D)</div>
-                            <div class="text-[11px] text-slate-400">Tekstur asli pakaian yang dipetakan ke permukaan model 3D di atas.</div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- 2. FULL INFORMASI DETAIL PRODUK (KOLOM KANAN - 7 Kolom) -->

@@ -159,13 +159,13 @@ const deleteProduct = (product) => {
                                     {{ formatRupiah(p.selling_price) }}
                                 </td>
                                 <td class="p-4 sm:p-5 text-center whitespace-nowrap space-x-1.5">
-                                    <!-- Tombol Detail 3D (Halaman Khusus) -->
+                                    <!-- Tombol Detail (Halaman Khusus) -->
                                     <Link
                                         :href="route('warehouse.products.show', p.id)"
                                         class="px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500 text-purple-300 hover:text-slate-950 text-xs font-bold border border-purple-500/30 hover:border-purple-400 transition inline-flex items-center gap-1 shadow-sm"
-                                        title="Buka Tampilan Detail 3D"
+                                        title="Buka Halaman Detail Produk"
                                     >
-                                        <span>👁️ Detail 3D</span>
+                                        <span>👁️ Detail</span>
                                     </Link>
                                     <Link
                                         :href="route('warehouse.products.edit', p.id)"
