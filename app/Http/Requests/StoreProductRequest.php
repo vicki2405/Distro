@@ -19,6 +19,7 @@ class StoreProductRequest extends FormRequest
             'cost_price' => ['nullable', 'numeric', 'min:0'],
             'selling_price' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string', 'max:1000'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'sizes' => ['required', 'array', 'min:1'],
             'sizes.*' => ['required', 'string', 'max:10'],
         ];
@@ -27,12 +28,15 @@ class StoreProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Nama artikel baju wajib diisi.',
-            'category_id.required' => 'Kategori baju wajib dipilih.',
+            'name.required' => 'Nama produk wajib diisi.',
+            'category_id.required' => 'Kategori produk wajib dipilih.',
             'category_id.exists' => 'Kategori yang dipilih tidak valid.',
             'selling_price.required' => 'Harga jual retail wajib diisi.',
-            'sizes.required' => 'Pilih minimal satu varian ukuran baju.',
-            'sizes.min' => 'Pilih minimal satu varian ukuran baju.',
+            'image.image' => 'File harus berupa gambar.',
+            'image.mimes' => 'Format gambar harus JPG, JPEG, PNG, atau WEBP.',
+            'image.max' => 'Ukuran gambar maksimal 5MB.',
+            'sizes.required' => 'Pilih minimal satu varian ukuran produk.',
+            'sizes.min' => 'Pilih minimal satu varian ukuran produk.',
         ];
     }
 }

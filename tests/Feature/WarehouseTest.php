@@ -7,6 +7,8 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class WarehouseTest extends TestCase
@@ -162,6 +164,49 @@ class WarehouseTest extends TestCase
             'size' => 'XXL',
             'current_stock' => 0,
         ]);
+    }
+
+    public function test_can_create_and_update_product_with_image_upload(): void
+    {
+        Storage::fake('public');
+
+        $image = UploadedFile::fake()->image('hoodie.webp', 800, 800);
+
+        $response = $this->actingAs($this->owner)->post(route('warehouse.products.store'), [
+            'name' => 'Hoodie Zipper Heavy',
+            'category_id' => $this->category->id,
+            'cost_price' => 90000,
+            'selling_price' => 220000,
+            'description' => 'Fleece cotton 330gsm',
+            'image' => $image,
+            'sizes' => ['M', 'L', 'XL'],
+        ]);
+
+        $response->assertRedirect(route('warehouse.products.index'));
+
+        $product = Product::where('name', 'Hoodie Zipper Heavy')->firstOrFail();
+        $this->assertNotNull($product->image);
+        Storage::disk('public')->assertExists($product->image);
+        $this->assertNotNull($product->image_url);
+
+        // Update with new image
+        $newImage = UploadedFile::fake()->image('hoodie-v2.webp', 800, 800);
+        $oldImagePath = $product->image;
+
+        $updateResponse = $this->actingAs($this->owner)->put(route('warehouse.products.update', $product->id), [
+            'name' => 'Hoodie Zipper Heavy V2',
+            'category_id' => $this->category->id,
+            'cost_price' => 95000,
+            'selling_price' => 230000,
+            'image' => $newImage,
+        ]);
+
+        $updateResponse->assertRedirect(route('warehouse.products.index'));
+
+        $product->refresh();
+        $this->assertEquals('Hoodie Zipper Heavy V2', $product->name);
+        Storage::disk('public')->assertExists($product->image);
+        Storage::disk('public')->assertMissing($oldImagePath);
     }
 
     public function test_cannot_delete_product_with_existing_stock_movements(): void

@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -63,6 +64,11 @@ class ProductController extends Controller
             $internalCode = 'PRD-'.strtoupper(Str::random(6));
         } while (Product::where('code', $internalCode)->exists());
 
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('products', 'public');
+        }
+
         $product = Product::create([
             'category_id' => $validated['category_id'],
             'code' => $internalCode,
@@ -70,6 +76,7 @@ class ProductController extends Controller
             'cost_price' => $validated['cost_price'] ?? 0,
             'selling_price' => $validated['selling_price'],
             'description' => $validated['description'] ?? null,
+            'image' => $imagePath,
         ]);
 
         // Inisialisasi varian ukuran ke database dengan stok awal 0
@@ -102,13 +109,22 @@ class ProductController extends Controller
     {
         $validated = $request->validated();
 
-        $product->update([
+        $updateData = [
             'category_id' => $validated['category_id'],
             'name' => trim($validated['name']),
             'cost_price' => $validated['cost_price'] ?? 0,
             'selling_price' => $validated['selling_price'],
             'description' => $validated['description'] ?? null,
-        ]);
+        ];
+
+        if ($request->hasFile('image')) {
+            if ($product->image && Storage::disk('public')->exists($product->image)) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $updateData['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        $product->update($updateData);
 
         // Tambah varian ukuran baru jika ada
         if (! empty($validated['new_sizes'])) {
@@ -140,6 +156,10 @@ class ProductController extends Controller
             return back()->withErrors([
                 'error' => "Artikel '{$product->name}' tidak dapat dihapus karena sudah memiliki riwayat mutasi stok audit abadi.",
             ]);
+        }
+
+        if ($product->image && Storage::disk('public')->exists($product->image)) {
+            Storage::disk('public')->delete($product->image);
         }
 
         $product->delete();

@@ -114,7 +114,7 @@ const deleteProduct = (product) => {
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-950/60 text-slate-400 border-b border-slate-800 uppercase tracking-wider font-semibold">
                             <tr>
-                                <th class="p-4 sm:p-5">Nama Model Baju</th>
+                                <th class="p-4 sm:p-5">Produk & Artikel</th>
                                 <th class="p-4 sm:p-5">Kategori</th>
                                 <th class="p-4 sm:p-5">Varian Ukuran</th>
                                 <th class="p-4 sm:p-5 text-center">Total Stok</th>
@@ -125,10 +125,25 @@ const deleteProduct = (product) => {
                         </thead>
                         <tbody class="divide-y divide-slate-800/60 text-slate-300">
                             <tr v-for="p in products.data" :key="p.id" class="hover:bg-slate-800/30 transition">
-                                <td class="p-4 sm:p-5 font-bold text-white text-sm">
-                                    {{ p.name }}
-                                    <div v-if="p.description" class="text-[11px] text-slate-500 font-normal line-clamp-1 mt-0.5">
-                                        {{ p.description }}
+                                <td class="p-4 sm:p-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-11 h-11 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                                            <img
+                                                v-if="p.image_url"
+                                                :src="p.image_url"
+                                                :alt="p.name"
+                                                class="w-full h-full object-cover"
+                                            />
+                                            <span v-else class="text-slate-600 font-mono text-[9px] font-bold">
+                                                NO FOTO
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <div class="font-bold text-white text-sm">{{ p.name }}</div>
+                                            <div v-if="p.description" class="text-[11px] text-slate-500 font-normal line-clamp-1 mt-0.5">
+                                                {{ p.description }}
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="p-4 sm:p-5 whitespace-nowrap">

@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         // 1. Akun Pengguna (Owner & Pegawai Gudang)
         $owner = User::firstOrCreate(
-            ['email' => 'owner@distro.com'],
+            ['email' => 'admin@gmail.com'],
             [
                 'name' => 'Pemilik Distro (Owner)',
                 'role' => 'owner',
@@ -26,7 +26,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $staff = User::firstOrCreate(
-            ['email' => 'staff@distro.com'],
+            ['email' => 'staff@gmail.com'],
             [
                 'name' => 'Budi Pegawai Gudang',
                 'role' => 'staff',
