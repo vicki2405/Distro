@@ -9,11 +9,45 @@ use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // 0. Buat Master Permissions Terstruktur
+        $permissions = [
+            'products.view',
+            'products.create',
+            'products.edit',
+            'products.delete',
+            'categories.view',
+            'categories.manage',
+            'stock.view',
+            'stock.in',
+            'stock.out',
+            'stock.opname',
+            'users.manage',
+            'roles.manage',
+        ];
+
+        foreach ($permissions as $permName) {
+            Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+        }
+
+        $ownerRole = Role::firstOrCreate(['name' => 'owner', 'guard_name' => 'web']);
+        $staffRole = Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
+
+        $ownerRole->syncPermissions(Permission::all());
+        $staffRole->syncPermissions([
+            'products.view',
+            'categories.view',
+            'stock.view',
+            'stock.in',
+            'stock.out',
+        ]);
+
         // 1. Akun Pengguna (Owner & Pegawai Gudang)
         $owner = User::firstOrCreate(
             ['email' => 'admin@gmail.com'],
@@ -24,6 +58,7 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+        $owner->assignRole($ownerRole);
 
         $staff = User::firstOrCreate(
             ['email' => 'staff@gmail.com'],
@@ -34,6 +69,7 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+        $staff->assignRole($staffRole);
 
         // 2. Kategori Produk Distro Lengkap
         $categoriesData = [

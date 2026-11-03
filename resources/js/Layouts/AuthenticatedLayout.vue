@@ -173,6 +173,39 @@ const masterMenuOpen = ref(
                         </Link>
                     </div>
 
+                    <!-- 5. KELOMPOK: ADMINISTRASI (KHUSUS OWNER) -->
+                    <div v-if="$page.props.auth.user.role === 'owner'" class="space-y-1">
+                        <div class="px-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            Administrasi
+                        </div>
+
+                        <Link
+                            :href="route('warehouse.users.index')"
+                            :class="[
+                                'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition',
+                                route().current('warehouse.users.*')
+                                    ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30 shadow-xs'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                            ]"
+                        >
+                            <span class="text-sm">👥</span>
+                            <span>Kelola Pengguna</span>
+                        </Link>
+
+                        <Link
+                            :href="route('warehouse.roles.index')"
+                            :class="[
+                                'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition',
+                                route().current('warehouse.roles.*')
+                                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-xs'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                            ]"
+                        >
+                            <span class="text-sm">🛡️</span>
+                            <span>Role & Hak Akses</span>
+                        </Link>
+                    </div>
+
                 </div>
             </div>
 
