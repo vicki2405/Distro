@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
+use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -30,11 +31,14 @@ class DatabaseSeeder extends Seeder
             'stock.opname',
             'users.manage',
             'roles.manage',
+            'settings.manage',
         ];
 
         foreach ($permissions as $permName) {
             Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
         }
+
+        StoreSetting::current();
 
         $ownerRole = Role::firstOrCreate(['name' => 'owner', 'guard_name' => 'web']);
         $staffRole = Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);

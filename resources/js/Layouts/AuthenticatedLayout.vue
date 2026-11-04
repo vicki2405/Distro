@@ -204,6 +204,19 @@ const masterMenuOpen = ref(
                             <span class="text-sm">🛡️</span>
                             <span>Role & Hak Akses</span>
                         </Link>
+
+                        <Link
+                            :href="route('warehouse.settings.index')"
+                            :class="[
+                                'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition',
+                                route().current('warehouse.settings.*')
+                                    ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 shadow-xs'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                            ]"
+                        >
+                            <span class="text-sm">⚙️</span>
+                            <span>Pengaturan Toko</span>
+                        </Link>
                     </div>
 
                 </div>

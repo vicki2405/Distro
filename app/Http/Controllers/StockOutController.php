@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StockOutRequest;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\StockMovement;
+use App\Models\StoreSetting;
 use App\Services\StockService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,22 +20,40 @@ class StockOutController extends Controller
         protected StockService $stockService
     ) {}
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
         $products = Product::with(['category', 'variants' => function ($q) {
             $q->orderBy('id');
         }])->orderBy('name')->get();
 
+        $query = StockMovement::with(['variant.product.category', 'user'])
+            ->where('type', 'out')
+            ->latest();
+
+        if ($request->filled('search')) {
+            $search = (string) $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('reference_number', 'like', "%{$search}%")
+                    ->orWhere('destination', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%")
+                    ->orWhereHas('variant', function ($sub) use ($search) {
+                        $sub->where('sku', 'like', "%{$search}%")
+                            ->orWhereHas('product', function ($p) use ($search) {
+                                $p->where('name', 'like', "%{$search}%")
+                                    ->orWhere('code', 'like', "%{$search}%");
+                            });
+                    });
+            });
+        }
+
+        $movements = $query->paginate(15)->withQueryString();
+        $storeSetting = StoreSetting::current();
+
         return Inertia::render('Warehouse/StockOut', [
             'products' => $products,
-            'destinations' => [
-                'Kirim ke Toko Distro',
-                'Kirim ke Reseller / Grosir',
-                'Pesanan Online (Shopee/TikTok/Tokopedia)',
-                'Pesanan WhatsApp / Langsung',
-                'Retur ke Konveksi / Cacat',
-                'Keperluan Display / Endorsement',
-            ],
+            'movements' => $movements,
+            'filters' => $request->only(['search']),
+            'storeSetting' => $storeSetting,
         ]);
     }
 

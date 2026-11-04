@@ -7,6 +7,7 @@ const props = defineProps({
     categories: Array,
     filters: Object,
     stats: Object,
+    storeSetting: Object,
     canLogin: Boolean,
 });
 
@@ -180,44 +181,66 @@ const getStockBadge = (total) => {
 </script>
 
 <template>
-    <Head title="Katalog Produk Distro Resmi — Apparel & Streetwear" />
+    <Head :title="(storeSetting?.store_name || 'DISTRO CATALOG') + ' — ' + (storeSetting?.store_tagline || 'Apparel & Streetwear')" />
 
-    <!-- CANVAS UTAMA: Deep Slate & Cosmic Indigo Berenergi (Nyaman di Mata, Anti-Hitam Mati) -->
-    <div class="min-h-screen bg-gradient-to-br from-[#0c1322] via-[#111a30] to-[#0c1426] text-slate-100 flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950 relative overflow-x-hidden">
+    <!-- CANVAS UTAMA: Medium Slate & Cosmic Indigo Atmosphere (Lebih Terang, Segar, Berenergi) -->
+    <div class="min-h-screen bg-gradient-to-br from-[#131d2e] via-[#1a273f] to-[#121c2d] text-slate-100 flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950 relative overflow-x-hidden">
 
-        <!-- 1. ANIMATED AURORA MESH GLOW (BOLA CAHAYA HANGAT & ENERGIK DI LATAR) -->
-        <div class="fixed top-0 left-1/4 -translate-x-1/2 w-[550px] sm:w-[700px] h-[550px] sm:h-[700px] bg-gradient-to-br from-amber-500/25 via-orange-500/15 to-transparent rounded-full blur-[130px] pointer-events-none animate-pulse"></div>
-        <div class="fixed -bottom-40 right-10 w-[600px] sm:w-[750px] h-[600px] sm:h-[750px] bg-gradient-to-tl from-indigo-500/25 via-sky-500/15 to-transparent rounded-full blur-[140px] pointer-events-none"></div>
+        <!-- 1. TRIPLE ANIMATED AURORA MESH GLOW (BOLA CAHAYA HANGAT & ELEGAN DI LATAR) -->
+        <div class="fixed top-0 left-1/4 -translate-x-1/2 w-[550px] sm:w-[750px] h-[550px] sm:h-[750px] bg-gradient-to-br from-amber-500/25 via-orange-500/15 to-transparent rounded-full blur-[140px] pointer-events-none animate-pulse"></div>
+        <div class="fixed -bottom-32 right-10 w-[600px] sm:w-[800px] h-[600px] sm:h-[800px] bg-gradient-to-tl from-cyan-500/25 via-indigo-500/20 to-transparent rounded-full blur-[140px] pointer-events-none"></div>
+        <div class="fixed top-1/3 right-1/4 w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-purple-500/15 rounded-full blur-[130px] pointer-events-none"></div>
 
         <!-- TEKSTUR SUBTLE TECH GRID -->
-        <div class="fixed inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none opacity-80"></div>
+        <div class="fixed inset-0 bg-[radial-gradient(#ffffff0d_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none opacity-90"></div>
 
-        <!-- 2. TOP NAVBAR GLASSMORPHIC (DEEP SLATE, TOUCH-FRIENDLY & STICKY) -->
-        <header class="sticky top-0 z-40 backdrop-blur-xl bg-[#0d1629]/90 border-b border-slate-700/60 shadow-lg shadow-black/25 transition-all duration-300">
+        <!-- 2. TOP NAVBAR GLASSMORPHIC (MEDIUM SLATE, TOUCH-FRIENDLY & STICKY) -->
+        <header class="sticky top-0 z-40 backdrop-blur-xl bg-[#152136]/90 border-b border-slate-600/60 shadow-lg shadow-black/20 transition-all duration-300">
             <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-14 sm:h-18 flex items-center justify-between gap-3">
                 
                 <!-- Brand Logo Distro dengan Glowing Effect -->
                 <Link :href="route('welcome')" class="flex items-center gap-2.5 group shrink-0">
-                    <span class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center font-black text-slate-950 text-sm sm:text-lg shadow-lg shadow-amber-500/30 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                        D
+                    <img
+                        v-if="storeSetting?.logo_url"
+                        :src="storeSetting.logo_url"
+                        :alt="storeSetting.store_name"
+                        class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain bg-slate-900/90 border border-slate-700/60 p-1 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <span
+                        v-else
+                        class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center font-black text-slate-950 text-sm sm:text-lg shadow-lg shadow-amber-500/35 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300"
+                    >
+                        {{ (storeSetting?.store_name || 'D').charAt(0).toUpperCase() }}
                     </span>
                     <div>
                         <div class="font-black tracking-tight text-white text-xs sm:text-base leading-none group-hover:text-amber-400 transition-colors">
-                            DISTRO <span class="text-amber-400 font-normal">CATALOG</span>
+                            {{ storeSetting?.store_name || 'DISTRO CATALOG' }}
                         </div>
-                        <div class="text-[8px] sm:text-[9px] text-slate-400 font-mono tracking-wider mt-0.5 hidden sm:block">
-                            APPAREL & STREETWEAR
+                        <div class="text-[8px] sm:text-[9px] text-slate-300 font-mono tracking-wider mt-0.5 hidden sm:block">
+                            {{ storeSetting?.store_tagline || 'APPAREL & STREETWEAR' }}
                         </div>
                     </div>
                 </Link>
 
-                <!-- Beacon Live Inventory (Pulsing Indicator) -->
-                <div class="hidden md:flex items-center gap-2 px-3.5 py-1 rounded-full bg-slate-800/80 border border-slate-700/70 text-[11px] font-mono text-slate-300 backdrop-blur-md shadow-inner">
-                    <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-sm shadow-emerald-400"></span>
-                    </span>
-                    <span>LIVE STOCK FEED</span>
+                <!-- Beacon Live Inventory (Pulsing Radar Indicator) & Hubungi CS -->
+                <div class="flex items-center gap-2">
+                    <div class="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-600/70 text-[11px] font-mono text-slate-200 backdrop-blur-md shadow-inner">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-sm shadow-emerald-400"></span>
+                        </span>
+                        <span class="font-semibold text-slate-200">{{ storeSetting?.live_feed_text || 'LIVE STOCK FEED' }}</span>
+                    </div>
+
+                    <a
+                        v-if="storeSetting?.whatsapp_number"
+                        :href="'https://wa.me/' + storeSetting.whatsapp_number.replace(/\D/g, '')"
+                        target="_blank"
+                        class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-[11px] font-mono font-bold transition active:scale-95 shadow-sm"
+                    >
+                        <span>💬</span>
+                        <span>Chat CS</span>
+                    </a>
                 </div>
 
                 <!-- Tombol Masuk / Dashboard (Warna Amber Energik) -->
@@ -234,7 +257,7 @@ const getStockBadge = (total) => {
                     <template v-else>
                         <Link
                             :href="route('login')"
-                            class="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/70 text-white font-bold text-[11px] sm:text-xs transition-all duration-200 active:scale-95 shadow-sm"
+                            class="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-slate-800/90 hover:bg-slate-750 border border-slate-600/70 text-white font-bold text-[11px] sm:text-xs transition-all duration-200 active:scale-95 shadow-sm"
                         >
                             <span>🔑</span>
                             <span>Masuk Portal</span>
@@ -247,38 +270,25 @@ const getStockBadge = (total) => {
         <!-- 3. MAIN CATALOG CONTAINER -->
         <main class="max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-9 space-y-6 sm:space-y-8 flex-1 relative z-10">
 
-            <!-- HERO HEADER & STATS CARDS -->
-            <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 pb-3 border-b border-slate-800">
-                <div class="space-y-2">
-                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] sm:text-xs font-mono font-semibold backdrop-blur-md">
-                        <span class="animate-bounce">✨</span>
-                        <span>Rilisan Resmi Katalog Baju Distro</span>
+            <!-- HERO HEADER (BERSIH & ELEGAN TANPA KARTU STATISTIK) -->
+            <div class="pb-3 border-b border-slate-700/60">
+                <div class="space-y-2 max-w-2xl">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/35 text-amber-300 text-[10px] sm:text-xs font-mono font-semibold backdrop-blur-md shadow-sm">
+                        <!-- Animated Rotating Sparkle Icon -->
+                        <svg class="w-3.5 h-3.5 text-amber-400 animate-[spin_6s_linear_infinite]" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        <span>{{ storeSetting?.hero_badge || 'Rilisan Resmi Katalog Baju Distro' }}</span>
                     </div>
                     <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
-                        Eksplorasi Koleksi <br class="hidden sm:inline" />
+                        {{ storeSetting?.hero_title_prefix || 'Eksplorasi Koleksi' }} <br class="hidden sm:inline" />
                         <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-orange-400">
-                            Distro & Streetwear
+                            {{ storeSetting?.hero_title_highlight || 'Distro & Streetwear' }}
                         </span>
                     </h1>
                     <p class="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-                        Daftar master artikel pakaian distro dengan ketersediaan stok aktual di rak gudang kami.
+                        {{ storeSetting?.hero_description || 'Daftar master artikel pakaian distro dengan ketersediaan stok aktual di rak gudang kami.' }}
                     </p>
-                </div>
-
-                <!-- 3 KARTU STATISTIK BERENERGI (FROSTED GLASS ELEVATION) -->
-                <div class="grid grid-cols-3 gap-2.5 sm:gap-3.5 shrink-0">
-                    <div class="bg-slate-800/60 hover:bg-slate-800/90 backdrop-blur-xl rounded-2xl border border-slate-700/60 p-2.5 sm:p-4 text-center transition-all duration-300 hover:-translate-y-1 shadow-lg shadow-black/25">
-                        <div class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400">Artikel</div>
-                        <div class="text-base sm:text-2xl font-black text-white mt-0.5 font-mono">{{ stats?.total_products || 0 }}</div>
-                    </div>
-                    <div class="bg-slate-800/60 hover:bg-slate-800/90 backdrop-blur-xl rounded-2xl border border-slate-700/60 p-2.5 sm:p-4 text-center transition-all duration-300 hover:-translate-y-1 shadow-lg shadow-black/25">
-                        <div class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-amber-400">Kategori</div>
-                        <div class="text-base sm:text-2xl font-black text-amber-400 mt-0.5 font-mono">{{ stats?.total_categories || 0 }}</div>
-                    </div>
-                    <div class="bg-slate-800/60 hover:bg-slate-800/90 backdrop-blur-xl rounded-2xl border border-slate-700/60 p-2.5 sm:p-4 text-center transition-all duration-300 hover:-translate-y-1 shadow-lg shadow-black/25">
-                        <div class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-emerald-400">Ready Pcs</div>
-                        <div class="text-base sm:text-2xl font-black text-emerald-400 mt-0.5 font-mono">{{ (stats?.total_pieces || 0).toLocaleString('id-ID') }}</div>
-                    </div>
                 </div>
             </div>
 
@@ -297,7 +307,7 @@ const getStockBadge = (total) => {
                             @keyup.enter="applyFilters"
                             type="text"
                             placeholder="Cari nama artikel, kode SKU, hoodie, kaos..."
-                            class="w-full text-xs sm:text-sm rounded-2xl border-slate-700/70 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-400 bg-slate-800/70 text-white py-2.5 sm:py-3 pl-10 pr-9 transition placeholder-slate-400 font-medium backdrop-blur-md shadow-inner"
+                            class="w-full text-xs sm:text-sm rounded-2xl border-slate-600/70 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-400 bg-slate-800/80 text-white py-2.5 sm:py-3 pl-10 pr-9 transition placeholder-slate-400 font-medium backdrop-blur-md shadow-inner"
                         />
                         <button
                             v-if="search"
@@ -314,9 +324,10 @@ const getStockBadge = (total) => {
                         <button
                             type="button"
                             @click="applyFilters"
-                            class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs transition cursor-pointer active:scale-95 shadow-md shadow-amber-500/25"
+                            class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs transition cursor-pointer active:scale-95 shadow-md shadow-amber-500/25 flex items-center gap-1.5"
                         >
-                            Cari
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <span>Cari</span>
                         </button>
 
                         <!-- CUSTOM SORT DROPDOWN (KEBAL BUG WHITE-ON-WHITE BROWSER, ELEGAN & KONTRAST TINGGI) -->
@@ -324,7 +335,7 @@ const getStockBadge = (total) => {
                             <button
                                 type="button"
                                 @click="isSortOpen = !isSortOpen"
-                                class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 hover:border-amber-400/50 text-slate-200 text-xs font-semibold transition cursor-pointer shadow-sm active:scale-95 backdrop-blur-md"
+                                class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-750 border border-slate-600/70 hover:border-amber-400/60 text-slate-200 text-xs font-semibold transition cursor-pointer shadow-sm active:scale-95 backdrop-blur-md"
                                 aria-haspopup="listbox"
                                 :aria-expanded="isSortOpen"
                             >
@@ -346,7 +357,7 @@ const getStockBadge = (total) => {
                             >
                                 <div
                                     v-if="isSortOpen"
-                                    class="absolute right-0 mt-2 w-48 rounded-2xl bg-[#141d33] border border-slate-700 shadow-2xl shadow-black/80 py-1.5 z-50 backdrop-blur-2xl"
+                                    class="absolute right-0 mt-2 w-48 rounded-2xl bg-[#172338] border border-slate-600/80 shadow-2xl shadow-black/80 py-1.5 z-50 backdrop-blur-2xl"
                                 >
                                     <button
                                         v-for="opt in sortOptions"
@@ -354,7 +365,7 @@ const getStockBadge = (total) => {
                                         type="button"
                                         @click="selectSort(opt.value)"
                                         class="w-full px-3.5 py-2.5 text-left text-xs flex items-center justify-between transition cursor-pointer"
-                                        :class="sort === opt.value ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'"
+                                        :class="sort === opt.value ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-200 hover:bg-slate-700/80 hover:text-white'"
                                     >
                                         <span class="flex items-center gap-2">
                                             <span>{{ opt.icon }}</span>
@@ -366,28 +377,37 @@ const getStockBadge = (total) => {
                             </Transition>
                         </div>
 
-                        <!-- Mobile Grid Switcher (2-Kolom vs 1-Kolom) -->
-                        <div class="flex sm:hidden items-center bg-slate-800/80 border border-slate-700/70 rounded-2xl p-1 backdrop-blur-md">
+                        <!-- Mobile Grid Switcher Presisi (SVG Icons) -->
+                        <div class="flex sm:hidden items-center bg-slate-800/90 border border-slate-600/70 rounded-2xl p-1 backdrop-blur-md">
+                            <!-- Mode 2 Kolom -->
                             <button
                                 type="button"
                                 @click="mobileViewMode = 'compact'"
                                 :class="[
-                                    'px-2 py-1.5 rounded-xl text-xs transition cursor-pointer',
-                                    mobileViewMode === 'compact' ? 'bg-amber-500 text-slate-950 font-black shadow-sm' : 'text-slate-400 hover:text-white'
+                                    'p-2 rounded-xl transition cursor-pointer flex items-center justify-center',
+                                    mobileViewMode === 'compact' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
                                 ]"
                                 title="Mode 2 Kolom Ringkas"
+                                aria-label="Mode 2 Kolom"
                             >
-                                ☷
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm8 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V4zM3 12a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4zm8 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" clip-rule="evenodd"/>
+                                </svg>
                             </button>
+                            <!-- Mode 1 Kolom -->
                             <button
+                                type="button"
                                 @click="mobileViewMode = 'spacious'"
                                 :class="[
-                                    'px-2 py-1.5 rounded-xl text-xs transition cursor-pointer',
-                                    mobileViewMode === 'spacious' ? 'bg-amber-500 text-slate-950 font-black shadow-sm' : 'text-slate-400 hover:text-white'
+                                    'p-2 rounded-xl transition cursor-pointer flex items-center justify-center',
+                                    mobileViewMode === 'spacious' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
                                 ]"
                                 title="Mode 1 Kolom Besar"
+                                aria-label="Mode 1 Kolom"
                             >
-                                ▢
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4z" clip-rule="evenodd"/>
+                                </svg>
                             </button>
                         </div>
                     </div>
@@ -399,13 +419,14 @@ const getStockBadge = (total) => {
                         type="button"
                         @click="selectCategory('')"
                         :class="[
-                            'px-4 py-2 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 border backdrop-blur-md',
+                            'px-4 py-2 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 border backdrop-blur-md flex items-center gap-1.5',
                             selectedCategory === ''
-                                ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 border-amber-400 font-black shadow-md shadow-amber-500/30 scale-[1.02]'
-                                : 'bg-slate-850/80 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-700/70'
+                                ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 border-amber-400 font-black shadow-md shadow-amber-500/35 scale-[1.02]'
+                                : 'bg-slate-800/80 hover:bg-slate-750 text-slate-200 hover:text-white border-slate-650/70'
                         ]"
                     >
-                        Semua Kategori ({{ stats?.total_products || 0 }})
+                        <span>🔥</span>
+                        <span>Semua Koleksi ({{ stats?.total_products || 0 }})</span>
                     </button>
 
                     <button
@@ -416,10 +437,11 @@ const getStockBadge = (total) => {
                         :class="[
                             'px-4 py-2 rounded-2xl text-xs font-semibold transition whitespace-nowrap cursor-pointer shrink-0 border flex items-center gap-1.5 backdrop-blur-md',
                             selectedCategory === cat.id
-                                ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 border-amber-400 font-black shadow-md shadow-amber-500/30 scale-[1.02]'
-                                : 'bg-slate-850/80 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-700/70'
+                                ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 border-amber-400 font-black shadow-md shadow-amber-500/35 scale-[1.02]'
+                                : 'bg-slate-800/80 hover:bg-slate-750 text-slate-200 hover:text-white border-slate-650/70'
                         ]"
                     >
+                        <span>🏷️</span>
                         <span>{{ cat.name }}</span>
                         <span class="text-[10px] opacity-75 font-mono">({{ cat.products_count || 0 }})</span>
                     </button>
@@ -439,12 +461,12 @@ const getStockBadge = (total) => {
                     <div
                         v-for="product in products.data"
                         :key="product.id"
-                        class="group bg-slate-900/70 hover:bg-slate-850/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-700/60 hover:border-amber-400/60 hover:shadow-2xl hover:shadow-amber-500/15 transition-all duration-300 flex flex-col justify-between overflow-hidden hover:-translate-y-1.5 active:scale-[0.99]"
+                        class="group bg-slate-800/70 hover:bg-slate-750/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-600/60 hover:border-amber-400/70 hover:shadow-2xl hover:shadow-amber-500/20 transition-all duration-300 flex flex-col justify-between overflow-hidden hover:-translate-y-2 active:scale-[0.99]"
                     >
                         <!-- FOTO PRODUK DENGAN ASPECT RATIO 1:1 SQUARE (SEIMBANG & TIDAK OVERSIZE) -->
                         <div>
                             <div
-                                class="relative w-full aspect-square bg-gradient-to-b from-slate-800/80 via-slate-850/90 to-slate-900 overflow-hidden flex items-center justify-center cursor-pointer border-b border-slate-700/50"
+                                class="relative w-full aspect-square bg-gradient-to-b from-slate-750/70 via-slate-800/85 to-slate-850/95 overflow-hidden flex items-center justify-center cursor-pointer border-b border-slate-700/60"
                                 @click="openQuickView(product)"
                             >
                                 <img
@@ -454,14 +476,16 @@ const getStockBadge = (total) => {
                                     class="w-full h-full object-cover group-hover:scale-[1.07] transition-transform duration-500 ease-out"
                                     loading="lazy"
                                 />
-                                <div v-else class="flex flex-col items-center justify-center text-slate-400 gap-1.5 p-3 text-center">
-                                    <span class="text-4xl sm:text-5xl drop-shadow-md group-hover:scale-110 transition-transform duration-300">👕</span>
-                                    <span class="text-[9px] font-mono tracking-widest uppercase text-slate-400 font-semibold">Preview Master</span>
+                                <div v-else class="flex flex-col items-center justify-center text-slate-300 gap-2 p-3 text-center">
+                                    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-700/60 border border-slate-600/60 flex items-center justify-center text-3xl sm:text-4xl shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                                        👕
+                                    </div>
+                                    <span class="text-[9px] font-mono tracking-widest uppercase text-slate-300 font-bold">Preview Master</span>
                                 </div>
 
                                 <!-- Floating Glass Badges di Foto -->
                                 <div class="absolute top-2 inset-x-2 flex items-center justify-between gap-1 pointer-events-none">
-                                    <span class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md text-[9px] sm:text-[10px] font-bold text-slate-200 border border-slate-700/70 truncate max-w-[65%] shadow-sm">
+                                    <span class="px-2.5 py-0.5 rounded-lg bg-slate-900/85 backdrop-blur-md text-[9px] sm:text-[10px] font-bold text-slate-200 border border-slate-600/70 truncate max-w-[65%] shadow-sm">
                                         {{ product.category?.name || 'Distro' }}
                                     </span>
 
@@ -480,14 +504,15 @@ const getStockBadge = (total) => {
                                 <!-- Multi-photo tag -->
                                 <div
                                     v-if="product.images && product.images.length > 1"
-                                    class="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/85 backdrop-blur-md text-[9px] font-mono text-slate-300 border border-slate-700/70"
+                                    class="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/90 backdrop-blur-md text-[9px] font-mono text-slate-200 border border-slate-600/70 flex items-center gap-1 shadow-sm"
                                 >
-                                    📸 {{ product.images.length }} Sudut
+                                    <span>📸</span>
+                                    <span>{{ product.images.length }} Sudut</span>
                                 </div>
                             </div>
 
                             <!-- INFORMASI PRODUK -->
-                            <div class="p-3 sm:p-4 space-y-2 sm:space-y-2.5">
+                            <div class="p-3.5 sm:p-4 space-y-2 sm:space-y-2.5">
                                 <div>
                                     <div class="text-[9px] sm:text-[11px] font-mono text-amber-400 font-bold uppercase truncate">
                                         {{ product.code }}
@@ -507,7 +532,7 @@ const getStockBadge = (total) => {
                                 </div>
 
                                 <!-- Pilihan Varian Ukuran -->
-                                <div class="pt-1.5 border-t border-slate-800">
+                                <div class="pt-1.5 border-t border-slate-700/60">
                                     <div class="flex flex-wrap gap-1 items-center">
                                         <template v-if="product.variants && product.variants.length > 0">
                                             <span
@@ -516,7 +541,7 @@ const getStockBadge = (total) => {
                                                 :class="[
                                                     'px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-mono font-bold border transition-colors',
                                                     v.current_stock > 0
-                                                        ? 'bg-slate-800/90 hover:bg-amber-500/20 text-slate-200 border-slate-700/80'
+                                                        ? 'bg-slate-750 hover:bg-amber-500/20 text-slate-200 border-slate-600/80'
                                                         : 'bg-slate-900/60 text-slate-600 border-transparent line-through'
                                                 ]"
                                             >
@@ -531,15 +556,16 @@ const getStockBadge = (total) => {
                             </div>
                         </div>
 
-                        <!-- TOMBOL DETAIL AMBER BERENERGI -->
-                        <div class="p-3 sm:p-4 pt-0">
+                        <!-- TOMBOL DETAIL AMBER BERENERGI DENGAN SLIDING ARROW -->
+                        <div class="p-3.5 sm:p-4 pt-0">
                             <button
                                 type="button"
                                 @click="openQuickView(product)"
-                                class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-[11px] sm:text-xs transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/25 active:scale-95 group-hover:shadow-amber-500/40"
+                                class="group/btn w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-[11px] sm:text-xs transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/25 active:scale-95 group-hover:shadow-amber-500/40"
                             >
-                                <span>👁️</span>
+                                <svg class="w-3.5 h-3.5 text-slate-950 transition-transform duration-200 group-hover/btn:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 <span>Lihat Detail</span>
+                                <svg class="w-3.5 h-3.5 text-slate-950 transition-transform duration-200 group-hover/btn:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                             </button>
                         </div>
                     </div>
@@ -548,7 +574,7 @@ const getStockBadge = (total) => {
                 <!-- 5. PAGINASI RESMI -->
                 <div
                     v-if="products.links && products.links.length > 3"
-                    class="pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 border-t border-slate-800"
+                    class="pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-300 border-t border-slate-700/60"
                 >
                     <div class="text-[11px] sm:text-xs text-center sm:text-left">
                         Menampilkan {{ products.from || 0 }} - {{ products.to || 0 }} dari {{ products.total }} produk
@@ -563,13 +589,13 @@ const getStockBadge = (total) => {
                                     'px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer',
                                     link.active
                                         ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/25'
-                                        : 'bg-slate-800/70 hover:bg-slate-700/80 text-slate-300 border border-slate-700/70'
+                                        : 'bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-600/70'
                                 ]"
                                 v-html="link.label"
                             />
                             <span
                                 v-else
-                                class="px-2.5 py-1 text-slate-600 cursor-not-allowed text-xs"
+                                class="px-2.5 py-1 text-slate-500 cursor-not-allowed text-xs"
                                 v-html="link.label"
                             />
                         </template>
@@ -580,7 +606,7 @@ const getStockBadge = (total) => {
             <!-- EMPTY STATE -->
             <div
                 v-else
-                class="py-14 sm:py-18 text-center space-y-3.5 bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-slate-700/60 p-8 shadow-xl"
+                class="py-14 sm:py-18 text-center space-y-3.5 bg-slate-800/60 backdrop-blur-xl rounded-3xl border border-slate-600/60 p-8 shadow-xl"
             >
                 <div class="text-5xl animate-bounce">👕</div>
                 <div class="space-y-1">
@@ -629,26 +655,26 @@ const getStockBadge = (total) => {
                     leave-to-class="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0"
                     appear
                 >
-                    <div class="bg-[#0f172a] border-t sm:border border-slate-700/80 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-2xl max-h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl relative">
+                    <div class="bg-[#152136] border-t sm:border border-slate-600/80 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-2xl max-h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl relative">
                         
                         <!-- Drag Handle Bar (Khusus Mobile) -->
-                        <div class="w-12 h-1 bg-slate-600 rounded-full mx-auto my-2.5 sm:hidden shrink-0"></div>
+                        <div class="w-12 h-1 bg-slate-500 rounded-full mx-auto my-2.5 sm:hidden shrink-0"></div>
 
                         <!-- Bagian Kiri / Atas: Foto Produk & Sudut -->
-                        <div class="w-full md:w-1/2 bg-gradient-to-b from-slate-900 to-[#0b101e] p-4 sm:p-5 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-700/70 shrink-0">
-                            <div class="relative w-full aspect-video sm:aspect-square bg-slate-800/60 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-700/60">
+                        <div class="w-full md:w-1/2 bg-gradient-to-b from-slate-800 to-slate-850 p-4 sm:p-5 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-650/70 shrink-0">
+                            <div class="relative w-full aspect-video sm:aspect-square bg-slate-750/80 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-600/60 shadow-inner">
                                 <img
                                     v-if="currentPreviewImage"
                                     :src="currentPreviewImage.url"
                                     :alt="previewProduct.name"
                                     class="w-full h-full object-cover"
                                 />
-                                <div v-else class="text-slate-400 text-5xl">👕</div>
+                                <div v-else class="text-slate-300 text-5xl">👕</div>
 
                                 <!-- Tag Sudut Aktif -->
                                 <span
                                     v-if="currentPreviewImage"
-                                    class="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-slate-900/90 backdrop-blur-md text-[10px] font-mono text-amber-400 border border-slate-700/70 shadow-sm"
+                                    class="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-slate-900/90 backdrop-blur-md text-[10px] font-mono text-amber-400 border border-slate-600/70 shadow-sm"
                                 >
                                     {{ currentPreviewImage.label }}
                                 </span>
@@ -666,7 +692,7 @@ const getStockBadge = (total) => {
                                     @click="activeAngleIndex = idx"
                                     :class="[
                                         'w-12 h-12 rounded-xl overflow-hidden border-2 shrink-0 transition cursor-pointer',
-                                        activeAngleIndex === idx ? 'border-amber-400 scale-105' : 'border-slate-700 opacity-60 hover:opacity-100'
+                                        activeAngleIndex === idx ? 'border-amber-400 scale-105' : 'border-slate-600/60 opacity-70 hover:opacity-100'
                                     ]"
                                     :aria-label="`Pilih sudut ${idx + 1}`"
                                 >
@@ -680,7 +706,7 @@ const getStockBadge = (total) => {
                             <div class="space-y-3.5">
                                 <div class="flex items-start justify-between gap-2">
                                     <div>
-                                        <span class="px-2.5 py-0.5 rounded-full bg-slate-800 text-[10px] font-bold text-slate-300 border border-slate-700">
+                                        <span class="px-2.5 py-0.5 rounded-full bg-slate-750 text-[10px] font-bold text-slate-200 border border-slate-600/70">
                                             {{ previewProduct.category?.name || 'Distro' }}
                                         </span>
                                         <div class="text-[11px] font-mono text-amber-400 font-bold mt-1">
@@ -694,7 +720,7 @@ const getStockBadge = (total) => {
                                     <button
                                         type="button"
                                         @click="closeQuickView"
-                                        class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 active:scale-95 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer text-sm shrink-0"
+                                        class="w-9 h-9 rounded-xl bg-slate-750/90 hover:bg-slate-700 border border-slate-600/80 active:scale-95 text-slate-200 hover:text-white flex items-center justify-center transition cursor-pointer text-sm shrink-0"
                                         aria-label="Tutup Detail Produk"
                                     >
                                         ✕
@@ -702,8 +728,8 @@ const getStockBadge = (total) => {
                                 </div>
 
                                 <!-- Harga Resmi -->
-                                <div class="p-3 rounded-2xl bg-slate-800/60 border border-slate-700/70 flex items-center justify-between">
-                                    <span class="text-xs font-semibold text-slate-400">Harga Retail</span>
+                                <div class="p-3 rounded-2xl bg-slate-800/90 border border-slate-650/70 flex items-center justify-between shadow-sm">
+                                    <span class="text-xs font-semibold text-slate-300">Harga Retail</span>
                                     <span class="text-base sm:text-xl font-black text-amber-400 font-mono">
                                         {{ formatRupiah(previewProduct.selling_price) }}
                                     </span>
@@ -711,30 +737,30 @@ const getStockBadge = (total) => {
 
                                 <!-- Deskripsi -->
                                 <div class="space-y-1">
-                                    <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                    <div class="text-[10px] font-bold uppercase tracking-wider text-slate-300">
                                         Deskripsi & Spesifikasi
                                     </div>
-                                    <p class="text-xs text-slate-300 leading-relaxed whitespace-pre-line max-h-24 overflow-y-auto pr-1">
+                                    <p class="text-xs text-slate-200 leading-relaxed whitespace-pre-line max-h-24 overflow-y-auto pr-1">
                                         {{ previewProduct.description || 'Tidak ada deskripsi detail untuk artikel ini.' }}
                                     </p>
                                 </div>
 
                                 <!-- Ketersediaan Stok per Ukuran -->
-                                <div class="space-y-1.5 pt-2 border-t border-slate-800">
-                                    <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                <div class="space-y-1.5 pt-2 border-t border-slate-700/60">
+                                    <div class="text-[10px] font-bold uppercase tracking-wider text-slate-300">
                                         Stok per Ukuran di Rak Gudang:
                                     </div>
-                                    <div class="divide-y divide-slate-800 rounded-xl bg-slate-900/80 border border-slate-700/70 overflow-hidden text-xs">
+                                    <div class="divide-y divide-slate-700/60 rounded-xl bg-slate-800/90 border border-slate-650/70 overflow-hidden text-xs">
                                         <div
                                             v-for="v in previewProduct.variants"
                                             :key="v.id"
                                             class="p-2.5 flex items-center justify-between"
                                         >
                                             <div class="flex items-center gap-2">
-                                                <span class="w-6 h-6 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-bold font-mono text-white text-[11px]">
+                                                <span class="w-6 h-6 rounded-lg bg-slate-700 border border-slate-600 flex items-center justify-center font-bold font-mono text-white text-[11px]">
                                                     {{ v.size }}
                                                 </span>
-                                                <span class="text-slate-400 font-mono text-[10px]">{{ v.sku }}</span>
+                                                <span class="text-slate-300 font-mono text-[10px]">{{ v.sku }}</span>
                                             </div>
                                             <div class="font-bold text-xs font-mono">
                                                 <span v-if="v.current_stock > 0" class="text-emerald-400">
@@ -750,11 +776,20 @@ const getStockBadge = (total) => {
                             </div>
 
                             <!-- Footer Modal Action -->
-                            <div class="pt-3.5 border-t border-slate-800 flex items-center justify-between gap-2">
-                                <div class="text-[11px] sm:text-xs text-slate-400">
+                            <div class="pt-3.5 border-t border-slate-700/60 flex items-center justify-between gap-2">
+                                <div class="text-[11px] sm:text-xs text-slate-300">
                                     Total: <strong class="text-white">{{ getTotalStock(previewProduct) }} pcs</strong>
                                 </div>
                                 <div class="flex items-center gap-2">
+                                    <a
+                                        v-if="storeSetting?.whatsapp_number"
+                                        :href="'https://wa.me/' + storeSetting.whatsapp_number.replace(/\D/g, '') + '?text=' + encodeURIComponent('Halo ' + (storeSetting.store_name || 'Admin') + ', saya tertarik dengan produk ' + previewProduct.name + ' (' + previewProduct.code + '). Apakah stok masih ready?')"
+                                        target="_blank"
+                                        class="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition active:scale-95 flex items-center gap-1.5"
+                                    >
+                                        <span>💬</span>
+                                        <span>Order WA</span>
+                                    </a>
                                     <Link
                                         v-if="$page.props.auth.user"
                                         :href="route('warehouse.products.edit', previewProduct.id)"
@@ -765,7 +800,7 @@ const getStockBadge = (total) => {
                                     <button
                                         type="button"
                                         @click="closeQuickView"
-                                        class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold transition cursor-pointer active:scale-95 border border-slate-700"
+                                        class="px-4 py-2 rounded-xl bg-slate-750 hover:bg-slate-700 text-slate-200 text-[11px] font-bold transition cursor-pointer active:scale-95 border border-slate-600"
                                     >
                                         Tutup
                                     </button>
@@ -779,7 +814,7 @@ const getStockBadge = (total) => {
 
         <!-- 6. FOOTER RESMI -->
         <footer class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-[11px] text-slate-400 border-t border-white/10 relative z-10">
-            © 2026 Distro Operations • Official Apparel Catalog & Real-Time Logistics Feed
+            {{ storeSetting?.footer_text || '© 2026 Distro Operations • Official Apparel Catalog & Real-Time Logistics Feed' }}
         </footer>
 
     </div>

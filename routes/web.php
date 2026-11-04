@@ -7,11 +7,13 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\StockInController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\StockOutController;
+use App\Http\Controllers\StoreSettingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WarehouseDashboardController;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\StoreSetting;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -63,6 +65,7 @@ Route::get('/', function (Request $request) {
         'categories' => $categories,
         'filters' => $request->only(['search', 'category', 'sort']),
         'stats' => $stats,
+        'storeSetting' => StoreSetting::current(),
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
@@ -84,6 +87,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/movements', [StockMovementController::class, 'index'])->name('movements');
         Route::resource('users', UserController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('roles', RoleController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::get('/settings', [StoreSettingController::class, 'index'])->name('settings.index');
+        Route::post('/settings', [StoreSettingController::class, 'update'])->name('settings.update');
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
