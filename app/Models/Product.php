@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
@@ -28,13 +29,21 @@ class Product extends Model
     public function getImageUrlAttribute(): ?string
     {
         if ($this->image) {
-            return str_starts_with($this->image, 'http')
-                ? $this->image
-                : '/storage/'.$this->image;
+            if (str_starts_with($this->image, 'http') || Storage::disk('public')->exists($this->image)) {
+                return str_starts_with($this->image, 'http')
+                    ? $this->image
+                    : '/storage/'.$this->image;
+            }
         }
 
         if ($this->relationLoaded('images') && $this->images->isNotEmpty()) {
-            return $this->images->first()->url;
+            $validImage = $this->images->first(function ($img) {
+                return str_starts_with($img->image_path, 'http') || Storage::disk('public')->exists($img->image_path);
+            });
+
+            if ($validImage) {
+                return $validImage->url;
+            }
         }
 
         return null;

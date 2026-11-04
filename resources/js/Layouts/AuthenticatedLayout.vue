@@ -4,9 +4,9 @@ import { Link } from '@inertiajs/vue3';
 
 const sidebarOpen = ref(false);
 
-// Submenu Master Produk default terbuka jika sedang di halaman products atau categories
+// Submenu Master Produk default terbuka jika sedang di halaman products, categories, atau sizes
 const masterMenuOpen = ref(
-    route().current('warehouse.products.*') || route().current('warehouse.categories.*')
+    route().current('warehouse.products.*') || route().current('warehouse.categories.*') || route().current('warehouse.sizes.*')
 );
 </script>
 
@@ -79,7 +79,7 @@ const masterMenuOpen = ref(
                                 @click="masterMenuOpen = !masterMenuOpen"
                                 :class="[
                                     'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer',
-                                    (route().current('warehouse.products.*') || route().current('warehouse.categories.*'))
+                                    (route().current('warehouse.products.*') || route().current('warehouse.categories.*') || route().current('warehouse.sizes.*'))
                                         ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
                                         : 'text-slate-400 hover:text-white hover:bg-slate-900'
                                 ]"
@@ -115,6 +115,18 @@ const masterMenuOpen = ref(
                                     ]"
                                 >
                                     • Kategori Produk
+                                </Link>
+
+                                <Link
+                                    :href="route('warehouse.sizes.index')"
+                                    :class="[
+                                        'block px-3 py-1.5 rounded-lg text-xs font-medium transition',
+                                        route().current('warehouse.sizes.*')
+                                            ? 'bg-slate-800 text-purple-400 font-bold border border-slate-700/60'
+                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                                    ]"
+                                >
+                                    • Size
                                 </Link>
                             </div>
                         </div>

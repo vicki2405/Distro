@@ -6,7 +6,14 @@ import { convertAndCompressImage } from '@/Utils/imageConverter';
 
 const props = defineProps({
     categories: Array,
-    defaultSizes: Array,
+    defaultSizes: {
+        type: Array,
+        default: () => ['S', 'M', 'L', 'XL', 'XXL'],
+    },
+    availableSizes: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const form = useForm({
@@ -21,7 +28,11 @@ const form = useForm({
     sizes: [...props.defaultSizes],
 });
 
-const availableSizes = ref([...props.defaultSizes, '3XL', 'ALL_SIZE']);
+const availableSizes = ref(
+    props.availableSizes && props.availableSizes.length > 0
+        ? [...props.availableSizes]
+        : [...props.defaultSizes, '3XL', 'ALL_SIZE']
+);
 const customSizeInput = ref('');
 
 // State Upload & Konversi Multi-Foto

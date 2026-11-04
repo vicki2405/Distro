@@ -271,6 +271,71 @@ class WarehouseTest extends TestCase
         $product->refresh();
         $this->assertCount(5, $product->images); // 5 - 1 + 1 = 5
         $this->assertDatabaseMissing('product_images', ['id' => $deletedImgId]);
+        $this->assertNotNull($product->image);
+        $this->assertTrue(Storage::disk('public')->exists($product->image));
+    }
+
+    public function test_owner_can_edit_stock_delete_and_add_variants(): void
+    {
+        $variantM = ProductVariant::create([
+            'product_id' => $this->product->id,
+            'size' => 'M',
+            'sku' => 'TS-TEST-01-M',
+            'current_stock' => 5,
+        ]);
+        $variantL = $this->variantL;
+
+        // 1. Owner updates stock of Size L from 20 to 25, deletes Size M, and adds Size 3XL with 10 pcs
+        $response = $this->actingAs($this->owner)->put(route('warehouse.products.update', $this->product->id), [
+            'name' => $this->product->name,
+            'category_id' => $this->category->id,
+            'selling_price' => $this->product->selling_price,
+            'variant_stocks' => [
+                ['id' => $variantL->id, 'current_stock' => 25],
+            ],
+            'deleted_variant_ids' => [$variantM->id],
+            'new_variants' => [
+                ['size' => '3XL', 'initial_stock' => 10],
+            ],
+        ]);
+
+        $response->assertRedirect(route('warehouse.products.index'));
+
+        // Check Size L stock updated to 25
+        $variantL->refresh();
+        $this->assertEquals(25, $variantL->current_stock);
+
+        // Check Size M was deleted
+        $this->assertDatabaseMissing('product_variants', ['id' => $variantM->id]);
+
+        // Check Size 3XL was created with 10 pcs
+        $this->assertDatabaseHas('product_variants', [
+            'product_id' => $this->product->id,
+            'size' => '3XL',
+            'current_stock' => 10,
+        ]);
+
+        // Check adjustment movements were recorded in audit ledger
+        $this->assertDatabaseHas('stock_movements', [
+            'product_variant_id' => $variantL->id,
+            'type' => 'adjustment',
+            'stock_before' => 20,
+            'stock_after' => 25,
+            'quantity' => 5,
+        ]);
+    }
+
+    public function test_cannot_delete_all_variants_of_a_product(): void
+    {
+        $response = $this->actingAs($this->owner)->put(route('warehouse.products.update', $this->product->id), [
+            'name' => $this->product->name,
+            'category_id' => $this->category->id,
+            'selling_price' => $this->product->selling_price,
+            'deleted_variant_ids' => [$this->variantL->id],
+        ]);
+
+        $response->assertSessionHasErrors('error');
+        $this->assertDatabaseHas('product_variants', ['id' => $this->variantL->id]);
     }
 
     public function test_cannot_delete_product_with_existing_stock_movements(): void

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Size;
 use App\Models\StockMovement;
 use App\Models\StoreSetting;
 use App\Models\User;
@@ -25,6 +26,8 @@ class DatabaseSeeder extends Seeder
             'products.delete',
             'categories.view',
             'categories.manage',
+            'sizes.view',
+            'sizes.manage',
             'stock.view',
             'stock.in',
             'stock.out',
@@ -91,6 +94,22 @@ class DatabaseSeeder extends Seeder
                 ['slug' => $slug],
                 ['name' => $name]
             );
+        }
+
+        // Master Ukuran (Sizes) Standar Distro
+        $defaultSizes = [
+            'XS' => 1,
+            'S' => 2,
+            'M' => 3,
+            'L' => 4,
+            'XL' => 5,
+            'XXL' => 6,
+            '3XL' => 7,
+            '4XL' => 8,
+            'ALL_SIZE' => 9,
+        ];
+        foreach ($defaultSizes as $szName => $szOrder) {
+            Size::firstOrCreate(['name' => $szName], ['order' => $szOrder]);
         }
 
         // 3. 10 Data Artikel Baju & Produk Distro Riil

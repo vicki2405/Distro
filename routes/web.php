@@ -4,6 +4,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SizeController;
 use App\Http\Controllers\StockInController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\StockOutController;
@@ -80,6 +81,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [WarehouseDashboardController::class, 'index'])->name('dashboard');
         Route::resource('products', ProductController::class);
         Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('sizes', SizeController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::get('/in', [StockInController::class, 'create'])->name('in.create');
         Route::post('/in', [StockInController::class, 'store'])->name('in.store');
         Route::get('/out', [StockOutController::class, 'create'])->name('out.create');
