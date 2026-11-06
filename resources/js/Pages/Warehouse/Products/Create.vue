@@ -22,6 +22,7 @@ const form = useForm({
     cost_price: '',
     selling_price: '',
     description: '',
+    rack_location: '',
     image: null,
     images: [],
     image_labels: [],
@@ -238,16 +239,33 @@ const submit = () => {
                         </div>
                     </div>
 
-                    <div class="space-y-1.5">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                            Deskripsi / Karakter Bahan (Opsional)
-                        </label>
-                        <textarea
-                            v-model="form.description"
-                            rows="2"
-                            placeholder="Contoh: 100% Cotton Combed 24s, sablon discharge, jahitan rantai rapi."
-                            class="w-full text-sm rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-slate-100 py-2.5 px-3.5 transition placeholder-slate-600"
-                        ></textarea>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                Deskripsi / Karakter Bahan <span class="text-slate-500 text-[10px] font-normal">(Opsional)</span>
+                            </label>
+                            <textarea
+                                v-model="form.description"
+                                rows="2"
+                                placeholder="Contoh: 100% Cotton Combed 24s, sablon discharge, jahitan rantai rapi."
+                                class="w-full text-sm rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-slate-100 py-2.5 px-3.5 transition placeholder-slate-600"
+                            ></textarea>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                Lokasi Rak / Penyimpanan <span class="text-slate-500 text-[10px] font-normal">(Opsional)</span>
+                            </label>
+                            <input
+                                v-model="form.rack_location"
+                                type="text"
+                                placeholder="Contoh: Rak A-01, Gantungan Depan, atau kosongkan"
+                                class="w-full text-sm rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-slate-100 py-3 px-3.5 transition placeholder-slate-600"
+                            />
+                            <div class="text-[10px] text-slate-500">
+                                Membantu staf menemukan artikel di rak saat packing & stock opname.
+                            </div>
+                        </div>
                     </div>
                 </div>
 

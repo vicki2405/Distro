@@ -22,6 +22,9 @@ class SizeController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless($user && ($user->isOwner() || $user->can('sizes.manage')), 403, 'Akses ditolak. Anda tidak memiliki izin untuk mengelola ukuran.');
+
         $validated = $request->validate([
             'name' => 'required|string|max:20|unique:sizes,name',
             'order' => 'nullable|integer',
@@ -44,6 +47,9 @@ class SizeController extends Controller
 
     public function update(Request $request, Size $size): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless($user && ($user->isOwner() || $user->can('sizes.manage')), 403, 'Akses ditolak. Anda tidak memiliki izin untuk mengelola ukuran.');
+
         $validated = $request->validate([
             'name' => 'required|string|max:20|unique:sizes,name,'.$size->id,
             'order' => 'nullable|integer',
@@ -68,8 +74,11 @@ class SizeController extends Controller
             ->with('success', "Ukuran '{$newName}' berhasil diperbarui.");
     }
 
-    public function destroy(Size $size): RedirectResponse
+    public function destroy(Request $request, Size $size): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless($user && ($user->isOwner() || $user->can('sizes.manage')), 403, 'Akses ditolak. Anda tidak memiliki izin untuk mengelola ukuran.');
+
         if ($size->variants()->exists()) {
             return back()->withErrors([
                 'error' => "Ukuran '{$size->name}' tidak dapat dihapus karena masih digunakan oleh varian produk di gudang.",

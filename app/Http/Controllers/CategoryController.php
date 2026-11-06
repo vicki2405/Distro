@@ -22,6 +22,9 @@ class CategoryController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless($user && ($user->isOwner() || $user->can('categories.manage')), 403, 'Akses ditolak. Anda tidak memiliki izin untuk mengelola kategori.');
+
         $validated = $request->validate([
             'name' => 'required|string|max:100|unique:categories,name',
         ], [
@@ -40,6 +43,9 @@ class CategoryController extends Controller
 
     public function update(Request $request, Category $category): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless($user && ($user->isOwner() || $user->can('categories.manage')), 403, 'Akses ditolak. Anda tidak memiliki izin untuk mengelola kategori.');
+
         $validated = $request->validate([
             'name' => 'required|string|max:100|unique:categories,name,'.$category->id,
         ], [
@@ -56,8 +62,11 @@ class CategoryController extends Controller
             ->with('success', 'Nama kategori produk berhasil diperbarui.');
     }
 
-    public function destroy(Category $category): RedirectResponse
+    public function destroy(Request $request, Category $category): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless($user && ($user->isOwner() || $user->can('categories.manage')), 403, 'Akses ditolak. Anda tidak memiliki izin untuk mengelola kategori.');
+
         if ($category->products()->exists()) {
             return back()->withErrors([
                 'error' => "Kategori '{$category->name}' tidak dapat dihapus karena masih digunakan oleh produk di katalog.",

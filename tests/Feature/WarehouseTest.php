@@ -423,4 +423,17 @@ class WarehouseTest extends TestCase
         $this->variantL->refresh();
         $this->assertEquals(20, $this->variantL->current_stock);
     }
+
+    public function test_authenticated_user_can_view_stock_in_page(): void
+    {
+        $response = $this->actingAs($this->staff)->get(route('warehouse.in.create'));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Warehouse/StockIn')
+            ->has('products')
+            ->has('movements')
+            ->has('filters')
+        );
+    }
 }

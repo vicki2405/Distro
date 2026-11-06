@@ -18,7 +18,7 @@ class UpdateStoreSettingRequest extends FormRequest
         return [
             'store_name' => ['required', 'string', 'max:100'],
             'store_tagline' => ['nullable', 'string', 'max:150'],
-            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,svg', 'max:3072'],
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
             'remove_logo' => ['nullable', 'boolean'],
             'hero_badge' => ['nullable', 'string', 'max:150'],
             'hero_title_prefix' => ['required', 'string', 'max:150'],

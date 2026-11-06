@@ -24,6 +24,7 @@ const form = useForm({
     cost_price: props.product.cost_price,
     selling_price: props.product.selling_price,
     description: props.product.description || '',
+    rack_location: props.product.rack_location || '',
     image: null,
     images: [],
     image_labels: [],
@@ -98,41 +99,27 @@ const processMultipleFiles = async (files) => {
                 previewUrl: result.previewUrl,
                 label: defaultLabel,
                 size: result.formattedConvertedSize,
-                saved: result.savedPercentage,
+                saved: result.compressionRatio,
             });
         } catch (err) {
-            conversionError.value = err.message || 'Gagal mengompresi gambar.';
+            conversionError.value = `Gagal memproses gambar "${file.name}": ${err.message}`;
+            break;
         }
     }
 
-    syncFormPhotos();
     isConverting.value = false;
-};
-
-const syncFormPhotos = () => {
-    form.images = newPhotos.value.map(p => p.file);
-    form.image_labels = newPhotos.value.map(p => p.label);
-};
-
-const removeNewPhoto = (idx) => {
-    newPhotos.value.splice(idx, 1);
-    syncFormPhotos();
-};
-
-const handleFileInputChange = (event) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-        processMultipleFiles(Array.from(files));
+    if (fileInputRef.value) {
+        fileInputRef.value.value = '';
     }
-    if (fileInputRef.value) fileInputRef.value.value = '';
 };
 
-const handleDrop = (event) => {
+const handleFileInputChange = (e) => {
+    processMultipleFiles(e.target.files);
+};
+
+const handleDrop = (e) => {
     isDragging.value = false;
-    const files = event.dataTransfer.files;
-    if (files && files.length > 0) {
-        processMultipleFiles(Array.from(files));
-    }
+    processMultipleFiles(e.dataTransfer.files);
 };
 
 const triggerFileInput = () => {
@@ -141,73 +128,33 @@ const triggerFileInput = () => {
     }
 };
 
-// State Varian Ukuran yang Tersimpan di Database
+const removeNewPhoto = (index) => {
+    newPhotos.value.splice(index, 1);
+};
+
+// State Varian Ukuran & Stok
 const existingVariants = ref(
     props.product.variants
-        ? props.product.variants.map((v) => ({
-              id: v.id,
-              size: v.size,
-              sku: v.sku,
-              original_stock: parseInt(v.current_stock) || 0,
-              current_stock: parseInt(v.current_stock) || 0,
-          }))
+        ? props.product.variants.map(v => ({
+            id: v.id,
+            size: v.size,
+            sku: v.sku,
+            current_stock: v.current_stock,
+            original_stock: v.current_stock,
+        }))
         : []
 );
 
-// State Varian Baru yang Ditambahkan pada Form
 const newVariants = ref([]);
 
-// Opsi Pilihan Ukuran di Dropdown diambil langsung dari Master Ukuran (Size)
-const sizeDropdownOptions = computed(() => {
-    return props.availableSizes && props.availableSizes.length > 0
-        ? props.availableSizes
-        : ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', 'ALL_SIZE'];
-});
-
-// State Form Dropdown Tambah Ukuran
-const selectedDropdownSize = ref('');
-const customSizeText = ref('');
-const inputStockValue = ref(0);
-
-const saveVariantFromDropdown = () => {
-    let finalSize = selectedDropdownSize.value;
-    if (finalSize === 'CUSTOM') {
-        finalSize = customSizeText.value.trim().toUpperCase();
-    }
-    if (!finalSize) {
-        alert('Silakan pilih ukuran terlebih dahulu.');
-        return;
-    }
-
-    const clean = finalSize.trim().toUpperCase();
-    const existsInDb = existingVariants.value.some(v => v.size.toUpperCase() === clean);
-    const existsInNew = newVariants.value.some(v => v.size.toUpperCase() === clean);
-
-    if (existsInDb || existsInNew) {
-        alert(`Ukuran '${clean}' sudah terdaftar dalam tabel.`);
-        return;
-    }
-
-    newVariants.value.push({
-        size: clean,
-        initial_stock: Math.max(0, parseInt(inputStockValue.value) || 0),
-    });
-
-    // Reset input form
-    selectedDropdownSize.value = '';
-    customSizeText.value = '';
-    inputStockValue.value = 0;
-};
-
 const removeExistingVariant = (id) => {
-    if (existingVariants.value.length + newVariants.value.length <= 1) {
-        alert('Artikel baju harus memiliki minimal 1 varian ukuran.');
+    const totalRemaining = existingVariants.value.length + newVariants.value.length;
+    if (totalRemaining <= 1) {
+        alert('Produk harus memiliki minimal satu ukuran.');
         return;
     }
-    const target = existingVariants.value.find(v => v.id === id);
-    if (!target) return;
 
-    if (confirm(`Apakah Anda yakin ingin menghapus varian Size ${target.size}?`)) {
+    if (confirm('Apakah Anda yakin ingin menghapus varian ukuran ini? Tindakan ini akan menghapus varian ukuran dari katalog.')) {
         if (!form.deleted_variant_ids.includes(id)) {
             form.deleted_variant_ids.push(id);
         }
@@ -215,53 +162,111 @@ const removeExistingVariant = (id) => {
     }
 };
 
-const removeNewVariant = (idx) => {
-    if (existingVariants.value.length + newVariants.value.length <= 1) {
-        alert('Artikel baju harus memiliki minimal 1 varian ukuran.');
-        return;
-    }
-    newVariants.value.splice(idx, 1);
+const removeNewVariant = (index) => {
+    newVariants.value.splice(index, 1);
 };
 
-// Kalkulasi Total Stok Realtime
+const stepStock = (variant, amount) => {
+    const newVal = (parseInt(variant.current_stock) || 0) + amount;
+    if (newVal >= 0) {
+        variant.current_stock = newVal;
+    }
+};
+
+const stepNewStock = (nv, amount) => {
+    const newVal = (parseInt(nv.initial_stock) || 0) + amount;
+    if (newVal >= 0) {
+        nv.initial_stock = newVal;
+    }
+};
+
+// Form Tambah Ukuran Baru (Pilihan Dropdown + Ketik Stok)
+const selectedDropdownSize = ref('');
+const customSizeText = ref('');
+const inputStockValue = ref(null);
+
+const standardSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'ALL_SIZE'];
+
+const sizeDropdownOptions = computed(() => {
+    const fromProps = props.availableSizes && props.availableSizes.length > 0
+        ? props.availableSizes
+        : standardSizes;
+
+    const usedSizes = [
+        ...existingVariants.value.map(v => v.size.toUpperCase()),
+        ...newVariants.value.map(v => v.size.toUpperCase())
+    ];
+
+    return fromProps.filter(s => !usedSizes.includes(s.toUpperCase()));
+});
+
+const saveVariantFromDropdown = () => {
+    let sizeToSave = '';
+    if (selectedDropdownSize.value === 'CUSTOM') {
+        sizeToSave = customSizeText.value.trim().toUpperCase();
+        if (!sizeToSave) {
+            alert('Harap ketik nama ukuran yang ingin ditambahkan.');
+            return;
+        }
+    } else if (selectedDropdownSize.value) {
+        sizeToSave = selectedDropdownSize.value.trim().toUpperCase();
+    } else {
+        alert('Pilih ukuran terlebih dahulu.');
+        return;
+    }
+
+    const isDuplicate = existingVariants.value.some(v => v.size.toUpperCase() === sizeToSave) ||
+                        newVariants.value.some(v => v.size.toUpperCase() === sizeToSave);
+
+    if (isDuplicate) {
+        alert(`Ukuran ${sizeToSave} sudah ada dalam daftar.`);
+        return;
+    }
+
+    const stock = inputStockValue.value !== null && inputStockValue.value !== ''
+        ? Math.max(0, parseInt(inputStockValue.value) || 0)
+        : 0;
+
+    newVariants.value.push({
+        size: sizeToSave,
+        initial_stock: stock,
+    });
+
+    selectedDropdownSize.value = '';
+    customSizeText.value = '';
+    inputStockValue.value = null;
+};
+
 const totalStockCalculated = computed(() => {
-    const existingTotal = existingVariants.value.reduce((acc, v) => acc + (parseInt(v.current_stock) || 0), 0);
-    const newTotal = newVariants.value.reduce((acc, v) => acc + (parseInt(v.initial_stock) || 0), 0);
+    const existingTotal = existingVariants.value.reduce((acc, curr) => acc + (parseInt(curr.current_stock) || 0), 0);
+    const newTotal = newVariants.value.reduce((acc, curr) => acc + (parseInt(curr.initial_stock) || 0), 0);
     return existingTotal + newTotal;
 });
 
-// Quick Stepper untuk Stok
-const stepStock = (variant, delta) => {
-    if (!props.isOwner) return;
-    const current = parseInt(variant.current_stock) || 0;
-    variant.current_stock = Math.max(0, current + delta);
-};
-
-const stepNewStock = (variant, delta) => {
-    const current = parseInt(variant.initial_stock) || 0;
-    variant.initial_stock = Math.max(0, current + delta);
-};
-
 const submit = () => {
-    syncFormPhotos();
+    if (existingVariants.value.length === 0 && newVariants.value.length === 0) {
+        alert('Produk harus memiliki minimal satu ukuran.');
+        return;
+    }
 
-    // Sinkronkan perubahan stok varian yang sudah ada
     form.variant_stocks = existingVariants.value.map(v => ({
         id: v.id,
-        current_stock: parseInt(v.current_stock) || 0,
+        current_stock: v.current_stock,
     }));
 
-    // Sinkronkan varian baru
     form.new_variants = newVariants.value.map(v => ({
         size: v.size,
-        initial_stock: parseInt(v.initial_stock) || 0,
+        initial_stock: v.initial_stock,
     }));
 
-    // Support backward compatibility untuk new_sizes
     form.new_sizes = newVariants.value.map(v => v.size);
+
+    form.images = newPhotos.value.map(p => p.file);
+    form.image_labels = newPhotos.value.map(p => p.label);
 
     form.post(route('warehouse.products.update', props.product.id), {
         forceFormData: true,
+        preserveScroll: true,
     });
 };
 </script>
@@ -271,501 +276,587 @@ const submit = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
+                    <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-400 text-xs font-mono font-bold mb-1">
+                        <span>👕 MASTER PRODUK • {{ product.code }}</span>
+                    </div>
                     <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">
                         Edit Master Produk: {{ product.name }}
                     </h2>
                     <p class="text-xs text-slate-400 mt-0.5">
-                        Perbarui nama produk, kategori, harga, varian ukuran, atau tambahkan galeri multi-foto sudut pandang.
+                        Perbarui nama produk, kategori, harga jual/modal, varian ukuran, serta galeri multi-sudut pandang.
                     </p>
                 </div>
-                <Link
-                    :href="route('warehouse.products.show', product.id)"
-                    class="text-xs font-semibold text-slate-400 hover:text-white bg-slate-900 border border-slate-800 hover:border-slate-700 px-4 py-2 rounded-xl transition"
-                >
-                    ← Lihat Detail
-                </Link>
+                <div class="flex items-center gap-2.5">
+                    <Link
+                        :href="route('warehouse.products.show', product.id)"
+                        class="text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2.5 rounded-xl transition active:scale-95 shadow-sm"
+                    >
+                        ← Lihat Detail
+                    </Link>
+                </div>
             </div>
         </template>
 
-        <div class="max-w-4xl mx-auto">
-            <form @submit.prevent="submit" class="bg-slate-900/70 backdrop-blur-md rounded-2xl border border-slate-800/80 p-6 sm:p-8 space-y-6 shadow-xl">
+        <!-- CONTAINER KERJA FULL-WIDTH (2-KOLOM ERGONOMIS & TANPA RUANG KOSONG) -->
+        <div class="w-full">
+            <form @submit.prevent="submit" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                <!-- 1. IDENTITAS UTAMA PRODUK -->
-                <div class="space-y-4">
-                    <h3 class="text-xs font-black uppercase tracking-wider text-purple-400">
-                        1. Informasi Produk
-                    </h3>
+                <!-- ========================================== -->
+                <!-- KOLOM KIRI (7/12): DATA PRODUK & STOK RAK -->
+                <!-- ========================================== -->
+                <div class="lg:col-span-7 space-y-6">
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                        <div class="space-y-1.5">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                                Nama Model / Artikel <span class="text-rose-400">*</span>
-                            </label>
-                            <input
-                                v-model="form.name"
-                                type="text"
-                                required
-                                class="w-full text-sm rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-white py-3 px-3.5 transition font-semibold"
-                            />
-                            <div v-if="form.errors.name" class="text-xs text-rose-400 font-semibold mt-1">
-                                {{ form.errors.name }}
+                    <!-- CARD 1: INFORMASI UTAMA PRODUK -->
+                    <div class="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800/80 p-5 sm:p-7 space-y-5 shadow-xl">
+                        <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                            <h3 class="text-xs font-black uppercase tracking-wider text-purple-400 flex items-center gap-2">
+                                <span>1. Informasi Utama Produk</span>
+                            </h3>
+                            <span class="text-[11px] font-mono text-slate-500">Kode: {{ product.code }}</span>
+                        </div>
+
+                        <!-- Baris 1: Nama & Kategori -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                    Nama Model / Artikel <span class="text-rose-400">*</span>
+                                </label>
+                                <input
+                                    v-model="form.name"
+                                    type="text"
+                                    required
+                                    placeholder="Contoh: Kaos Oversize Heavyweight Black"
+                                    class="w-full text-sm rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-white py-2.5 px-3.5 transition font-semibold"
+                                />
+                                <div v-if="form.errors.name" class="text-xs text-rose-400 font-semibold mt-1">
+                                    {{ form.errors.name }}
+                                </div>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                    Kategori Produk <span class="text-rose-400">*</span>
+                                </label>
+                                <select
+                                    v-model="form.category_id"
+                                    required
+                                    class="w-full text-sm rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-slate-100 py-2.5 px-3.5 transition"
+                                >
+                                    <option v-for="c in categories" :key="c.id" :value="c.id">
+                                        {{ c.name }}
+                                    </option>
+                                </select>
+                                <div v-if="form.errors.category_id" class="text-xs text-rose-400 font-semibold mt-1">
+                                    {{ form.errors.category_id }}
+                                </div>
                             </div>
                         </div>
 
-                        <div class="space-y-1.5">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                                Kategori Produk <span class="text-rose-400">*</span>
-                            </label>
-                            <select
-                                v-model="form.category_id"
-                                required
-                                class="w-full text-sm rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-slate-100 py-3 px-3.5 transition"
-                            >
-                                <option v-for="c in categories" :key="c.id" :value="c.id">
-                                    {{ c.name }}
-                                </option>
-                            </select>
-                            <div v-if="form.errors.category_id" class="text-xs text-rose-400 font-semibold mt-1">
-                                {{ form.errors.category_id }}
+                        <!-- Baris 2: Harga HPP & Harga Jual -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                    Modal HPP (Rp)
+                                </label>
+                                <input
+                                    v-model.number="form.cost_price"
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    class="w-full text-sm font-mono rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-emerald-400 py-2.5 px-3.5 transition"
+                                />
+                                <p class="text-[10px] text-slate-500">Harga pokok modal produksi konveksi.</p>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                    Harga Jual Retail (Rp) <span class="text-rose-400">*</span>
+                                </label>
+                                <input
+                                    v-model.number="form.selling_price"
+                                    type="number"
+                                    min="0"
+                                    required
+                                    placeholder="Contoh: 125000"
+                                    class="w-full text-sm font-mono rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-amber-400 font-bold py-2.5 px-3.5 transition"
+                                />
+                                <div v-if="form.errors.selling_price" class="text-xs text-rose-400 font-semibold mt-1">
+                                    {{ form.errors.selling_price }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Baris 3: Deskripsi Bahan & Lokasi Rak -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                    Deskripsi / Karakter Bahan <span class="text-slate-500 text-[10px] font-normal">(Opsional)</span>
+                                </label>
+                                <textarea
+                                    v-model="form.description"
+                                    rows="2"
+                                    placeholder="Tuliskan spesifikasi detail bahan (misal: Cotton Combed 24s, sablon discharge, jahitan rantai)..."
+                                    class="w-full text-xs sm:text-sm rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-slate-100 py-2.5 px-3.5 transition leading-relaxed"
+                                ></textarea>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                    Lokasi Rak / Penyimpanan <span class="text-slate-500 text-[10px] font-normal">(Opsional)</span>
+                                </label>
+                                <input
+                                    v-model="form.rack_location"
+                                    type="text"
+                                    placeholder="Contoh: Rak A-01, Gantungan Depan, atau kosongkan"
+                                    class="w-full text-xs sm:text-sm rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-slate-100 py-2.5 px-3.5 transition"
+                                />
+                                <div class="text-[10px] text-slate-500">
+                                    Membantu staf menemukan artikel di rak saat packing & stock opname.
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                        <div class="space-y-1.5">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                                Modal HPP (Rp)
-                            </label>
-                            <input
-                                v-model.number="form.cost_price"
-                                type="number"
-                                min="0"
-                                class="w-full text-sm font-mono rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-emerald-400 py-3 px-3.5 transition"
-                            />
+                    <!-- CARD 2: MATRIKS VARIAN UKURAN & STOK GUDANG -->
+                    <div class="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800/80 p-5 sm:p-7 space-y-5 shadow-xl">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-800/80 pb-4">
+                            <div>
+                                <h3 class="text-xs font-black uppercase tracking-wider text-purple-400 flex items-center gap-2">
+                                    <span>2. Varian Ukuran & Stok Fisik Rak</span>
+                                    <span v-if="isOwner" class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-bold">
+                                        Owner: Edit & Hapus Aktif
+                                    </span>
+                                </h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">
+                                    Sesuaikan stok fisik per ukuran atau tambahkan ukuran baru untuk artikel ini.
+                                </p>
+                            </div>
+                            <div class="text-left sm:text-right">
+                                <span class="text-xs text-slate-400">Total Stok Fisik: </span>
+                                <span class="text-base font-black text-emerald-400 font-mono">{{ totalStockCalculated }} pcs</span>
+                            </div>
                         </div>
 
-                        <div class="space-y-1.5">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                                Harga Jual Retail (Rp) <span class="text-rose-400">*</span>
-                            </label>
-                            <input
-                                v-model.number="form.selling_price"
-                                type="number"
-                                min="0"
-                                required
-                                class="w-full text-sm font-mono rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-amber-400 font-bold py-3 px-3.5 transition"
-                            />
-                            <div v-if="form.errors.selling_price" class="text-xs text-rose-400 font-semibold mt-1">
-                                {{ form.errors.selling_price }}
+                        <!-- TABEL MATRIKS VARIAN UKURAN (LUAS & LEGA) -->
+                        <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/70">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-900 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 font-mono text-[10px]">
+                                        <tr>
+                                            <th class="py-3 px-4">Ukuran</th>
+                                            <th class="py-3 px-4">SKU Internal</th>
+                                            <th class="py-3 px-4 text-center">Stok Fisik di Rak</th>
+                                            <th class="py-3 px-4 text-right">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-800/60 font-mono">
+                                        <!-- 1. Varian yang Sudah Ada di Database -->
+                                        <tr
+                                            v-for="v in existingVariants"
+                                            :key="v.id"
+                                            class="hover:bg-slate-800/30 transition"
+                                        >
+                                            <td class="py-3 px-4 font-bold text-white text-sm">
+                                                Size {{ v.size }}
+                                            </td>
+                                            <td class="py-3 px-4 text-slate-400 text-xs">
+                                                {{ v.sku }}
+                                            </td>
+                                            <td class="py-3 px-4 text-center">
+                                                <div v-if="isOwner" class="inline-flex items-center gap-1.5 justify-center">
+                                                    <button
+                                                        type="button"
+                                                        @click="stepStock(v, -1)"
+                                                        class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center justify-center transition cursor-pointer active:scale-95"
+                                                    >
+                                                        -
+                                                    </button>
+                                                    <input
+                                                        v-model.number="v.current_stock"
+                                                        type="number"
+                                                        min="0"
+                                                        class="w-20 text-center text-sm font-bold font-mono rounded-lg border-slate-800 bg-slate-950 text-emerald-400 py-1 focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        @click="stepStock(v, 1)"
+                                                        class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center justify-center transition cursor-pointer active:scale-95"
+                                                    >
+                                                        +
+                                                    </button>
+                                                    <span
+                                                        v-if="v.current_stock !== v.original_stock"
+                                                        class="text-[10px] ml-1 font-bold"
+                                                        :class="v.current_stock > v.original_stock ? 'text-emerald-400' : 'text-rose-400'"
+                                                    >
+                                                        ({{ v.current_stock > v.original_stock ? '+' : '' }}{{ v.current_stock - v.original_stock }})
+                                                    </span>
+                                                </div>
+                                                <span v-else class="font-bold text-slate-200 text-sm">
+                                                    {{ v.current_stock }} pcs
+                                                </span>
+                                            </td>
+                                            <td class="py-3 px-4 text-right">
+                                                <button
+                                                    v-if="isOwner"
+                                                    type="button"
+                                                    @click="removeExistingVariant(v.id)"
+                                                    class="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[11px] font-sans font-bold cursor-pointer transition active:scale-95"
+                                                    title="Hapus varian ukuran ini"
+                                                >
+                                                    🗑️ Hapus
+                                                </button>
+                                                <span v-else class="text-slate-600 text-[11px]">-</span>
+                                            </td>
+                                        </tr>
+
+                                        <!-- 2. Varian Baru yang Akan Ditambahkan -->
+                                        <tr
+                                            v-for="(nv, idx) in newVariants"
+                                            :key="'new-' + idx"
+                                            class="bg-emerald-950/20 hover:bg-emerald-950/30 transition border-l-2 border-emerald-500"
+                                        >
+                                            <td class="py-3 px-4 font-bold text-emerald-300 text-sm flex items-center gap-2">
+                                                <span>Size {{ nv.size }}</span>
+                                                <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-sans uppercase">
+                                                    Baru
+                                                </span>
+                                            </td>
+                                            <td class="py-3 px-4 text-slate-500 text-xs italic">
+                                                {{ product.code }}-{{ nv.size }}
+                                            </td>
+                                            <td class="py-3 px-4 text-center">
+                                                <div class="inline-flex items-center gap-1.5 justify-center">
+                                                    <button
+                                                        type="button"
+                                                        @click="stepNewStock(nv, -1)"
+                                                        class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center justify-center transition cursor-pointer active:scale-95"
+                                                    >
+                                                        -
+                                                    </button>
+                                                    <input
+                                                        v-model.number="nv.initial_stock"
+                                                        type="number"
+                                                        min="0"
+                                                        placeholder="Stok"
+                                                        class="w-20 text-center text-sm font-bold font-mono rounded-lg border-emerald-800/60 bg-slate-950 text-emerald-300 py-1 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        @click="stepNewStock(nv, 1)"
+                                                        class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center justify-center transition cursor-pointer active:scale-95"
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td class="py-3 px-4 text-right">
+                                                <button
+                                                    type="button"
+                                                    @click="removeNewVariant(idx)"
+                                                    class="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[11px] font-sans font-bold cursor-pointer transition active:scale-95"
+                                                >
+                                                    Batal ✕
+                                                </button>
+                                            </td>
+                                        </tr>
+
+                                        <tr v-if="existingVariants.length === 0 && newVariants.length === 0">
+                                            <td colspan="4" class="py-6 text-center text-slate-500">
+                                                Belum ada ukuran yang terdaftar. Tambahkan ukuran di bawah ini.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- FORM MODEL DROPDOWN PILIHAN SIZE + KETIK ANGKA STOK + TOMBOL SIMPAN -->
+                        <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                            <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                                Tambah Ukuran Baru:
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                                <!-- 1. Dropdown Pilihan Ukuran -->
+                                <div :class="selectedDropdownSize === 'CUSTOM' ? 'sm:col-span-4' : 'sm:col-span-5'" class="space-y-1">
+                                    <label class="text-[11px] font-semibold text-slate-400">Pilih Ukuran:</label>
+                                    <select
+                                        v-model="selectedDropdownSize"
+                                        class="w-full text-xs py-2 px-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-mono focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
+                                    >
+                                        <option value="" disabled>-- Pilih Ukuran --</option>
+                                        <option v-for="s in sizeDropdownOptions" :key="s" :value="s">Size {{ s }}</option>
+                                        <option value="CUSTOM">Lainnya (Ketik Manual...)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Input jika memilih kustom -->
+                                <div v-if="selectedDropdownSize === 'CUSTOM'" class="sm:col-span-3 space-y-1">
+                                    <label class="text-[11px] font-semibold text-slate-400">Nama Ukuran:</label>
+                                    <input
+                                        v-model="customSizeText"
+                                        type="text"
+                                        placeholder="Contoh: 4XL / 28"
+                                        class="w-full text-xs py-2 px-3 rounded-lg bg-slate-900 border border-slate-800 text-white font-mono uppercase focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
+                                    />
+                                </div>
+
+                                <!-- 2. Ketik Angka Stok -->
+                                <div :class="selectedDropdownSize === 'CUSTOM' ? 'sm:col-span-2' : 'sm:col-span-4'" class="space-y-1">
+                                    <label class="text-[11px] font-semibold text-slate-400">Jumlah Stok (Pcs):</label>
+                                    <input
+                                        v-model.number="inputStockValue"
+                                        type="number"
+                                        min="0"
+                                        placeholder="0"
+                                        class="w-full text-xs py-2 px-3 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400 font-mono font-bold text-center focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
+                                    />
+                                </div>
+
+                                <!-- 3. Tombol Simpan -->
+                                <div :class="selectedDropdownSize === 'CUSTOM' ? 'sm:col-span-3' : 'sm:col-span-3'">
+                                    <button
+                                        type="button"
+                                        @click="saveVariantFromDropdown"
+                                        class="w-full py-2 px-3 rounded-lg bg-purple-500 hover:bg-purple-400 text-slate-950 font-black text-xs transition cursor-pointer shadow-md shadow-purple-500/10 flex items-center justify-center gap-1.5 active:scale-95"
+                                    >
+                                        <span>+ Simpan Ukuran</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="space-y-1.5">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                            Deskripsi / Karakter Bahan
-                        </label>
-                        <textarea
-                            v-model="form.description"
-                            rows="2"
-                            class="w-full text-sm rounded-xl border-slate-800 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-slate-950 text-slate-100 py-2.5 px-3.5 transition"
-                        ></textarea>
-                    </div>
                 </div>
 
-                <!-- 2. GALERI MULTI-FOTO PRODUK (OPSIONAL LEBIH DARI 4 FOTO) -->
-                <div class="p-6 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-xs font-black uppercase tracking-wider text-purple-400 flex items-center gap-2">
-                                <span>2. Galeri Foto Produk</span>
-                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                                    Multi-Sudut (Depan, Belakang, Kiri, Kanan)
-                                </span>
-                            </h3>
-                            <p class="text-[11px] text-slate-400 mt-0.5">
-                                Bisa menambahkan lebih dari 4 foto pakaian dari berbagai sudut pandang. Sifatnya opsional.
-                            </p>
-                        </div>
-                    </div>
+                <!-- ============================================== -->
+                <!-- KOLOM KANAN (5/12): MEDIA FOTO & ACTION BUTTON -->
+                <!-- ============================================== -->
+                <div class="lg:col-span-5 space-y-6 lg:sticky lg:top-4">
 
-                    <!-- Hidden Native Multiple File Input -->
-                    <input
-                        ref="fileInputRef"
-                        type="file"
-                        multiple
-                        accept="image/jpeg,image/png,image/webp,image/jpg"
-                        class="hidden"
-                        @change="handleFileInputChange"
-                    />
-
-                    <!-- FOTO YANG SUDAH TERSIMPAN DI DATABASE -->
-                    <div v-if="existingImages.length > 0 || hasStandaloneMainImage" class="space-y-2">
-                        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                            <span>Foto yang Sedang Aktif:</span>
-                            <span class="text-[10px] text-slate-500 font-normal">Pilih 'Jadikan Utama' untuk foto sampul produk</span>
-                        </div>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <!-- Foto Utama Mandiri (Legacy) -->
-                            <div v-if="hasStandaloneMainImage" class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-col items-center gap-2 relative">
-                                <img
-                                    :src="product.image_url"
-                                    alt="Foto Utama"
-                                    class="w-full h-28 object-contain rounded-lg bg-black/40"
-                                    @error="(e) => e.target.style.opacity = '0.3'"
-                                />
-                                <span class="text-[10px] font-mono font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
-                                    ★ Foto Utama
-                                </span>
-                                <button
-                                    type="button"
-                                    @click="removeStandaloneMainImage"
-                                    class="text-[10px] text-rose-400 hover:text-rose-300 underline cursor-pointer"
-                                >
-                                    🗑️ Hapus Foto
-                                </button>
+                    <!-- CARD 3: GALERI MULTI-FOTO PRODUK -->
+                    <div class="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800/80 p-5 space-y-4 shadow-xl">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <div>
+                                <h3 class="text-xs font-black uppercase tracking-wider text-purple-400 flex items-center gap-2">
+                                    <span>3. Galeri Foto Produk</span>
+                                </h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">
+                                    Multi-Sudut (Depan, Belakang, Detail Jahitan).
+                                </p>
                             </div>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                                {{ existingImages.length + newPhotos.length + (hasStandaloneMainImage ? 1 : 0) }} Foto
+                            </span>
+                        </div>
 
-                            <!-- Galeri Foto Aktif -->
-                            <div
-                                v-for="img in existingImages"
-                                :key="img.id"
-                                class="p-2.5 rounded-xl bg-slate-900 border flex flex-col items-center gap-2 relative transition"
-                                :class="primaryImageId === img.id ? 'border-amber-500/60 shadow-lg shadow-amber-500/10 bg-slate-900/90' : 'border-slate-800'"
-                            >
-                                <img
-                                    :src="img.url"
-                                    :alt="img.label || 'Foto Galeri'"
-                                    class="w-full h-28 object-contain rounded-lg bg-black/40"
-                                    @error="(e) => e.target.style.opacity = '0.3'"
-                                />
-                                <div class="flex items-center gap-1">
-                                    <span
-                                        v-if="primaryImageId === img.id"
-                                        class="text-[9px] font-mono font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20"
-                                    >
+                        <!-- Hidden Native Multiple File Input -->
+                        <input
+                            ref="fileInputRef"
+                            type="file"
+                            multiple
+                            accept="image/jpeg,image/png,image/webp,image/jpg"
+                            class="hidden"
+                            @change="handleFileInputChange"
+                        />
+
+                        <!-- FOTO YANG SUDAH TERSIMPAN DI DATABASE -->
+                        <div v-if="existingImages.length > 0 || hasStandaloneMainImage" class="space-y-2">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                                <span>Foto Aktif Saat Ini:</span>
+                                <span class="text-[9px] text-slate-500">Pilih '★ Utama' untuk sampul</span>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                                <!-- Foto Utama Mandiri (Legacy) -->
+                                <div v-if="hasStandaloneMainImage" class="p-2 rounded-xl bg-slate-950 border border-slate-800 flex flex-col items-center gap-1.5 relative">
+                                    <img
+                                        :src="product.image_url"
+                                        alt="Foto Utama"
+                                        class="w-full h-24 object-contain rounded-lg bg-black/40"
+                                        @error="(e) => e.target.style.opacity = '0.3'"
+                                    />
+                                    <span class="text-[9px] font-mono font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
                                         ★ Utama
                                     </span>
-                                    <span class="text-[10px] font-mono text-slate-300 truncate max-w-[100px]">
-                                        {{ img.label || 'Foto Galeri' }}
-                                    </span>
-                                </div>
-                                <div class="flex items-center gap-2 pt-0.5">
-                                    <button
-                                        v-if="primaryImageId !== img.id"
-                                        type="button"
-                                        @click="setPrimaryImage(img.id)"
-                                        class="text-[10px] text-amber-400 hover:text-amber-300 underline cursor-pointer"
-                                    >
-                                        Jadikan Utama
-                                    </button>
                                     <button
                                         type="button"
-                                        @click="removeExistingImage(img.id)"
+                                        @click="removeStandaloneMainImage"
                                         class="text-[10px] text-rose-400 hover:text-rose-300 underline cursor-pointer"
                                     >
                                         🗑️ Hapus
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- PREVIEW FOTO BARU YANG AKAN DIUNGGAH -->
-                    <div v-if="newPhotos.length > 0" class="space-y-2 pt-2 border-t border-slate-800/60">
-                        <div class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
-                            Foto Baru yang Akan Ditambahkan ({{ newPhotos.length }} Foto):
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div
-                                v-for="(photo, idx) in newPhotos"
-                                :key="idx"
-                                class="p-3 rounded-xl bg-slate-900 border border-emerald-500/30 flex items-center gap-3"
-                            >
-                                <img
-                                    :src="photo.previewUrl"
-                                    alt="Preview"
-                                    class="w-16 h-16 object-contain rounded-lg bg-black/50 shrink-0"
-                                />
-                                <div class="flex-1 space-y-1.5">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-[10px] font-mono text-emerald-400 font-bold">
-                                            {{ photo.size }} • Hemat {{ photo.saved }}%
+                                <!-- Galeri Foto Aktif -->
+                                <div
+                                    v-for="img in existingImages"
+                                    :key="img.id"
+                                    class="p-2 rounded-xl bg-slate-950 border flex flex-col items-center gap-1.5 relative transition"
+                                    :class="primaryImageId === img.id ? 'border-amber-500/70 shadow-lg shadow-amber-500/10 bg-slate-900/90' : 'border-slate-800'"
+                                >
+                                    <img
+                                        :src="img.url"
+                                        :alt="img.label || 'Foto Galeri'"
+                                        class="w-full h-24 object-contain rounded-lg bg-black/40"
+                                        @error="(e) => e.target.style.opacity = '0.3'"
+                                    />
+                                    <div class="flex items-center gap-1">
+                                        <span
+                                            v-if="primaryImageId === img.id"
+                                            class="text-[9px] font-mono font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20"
+                                        >
+                                            ★ Utama
                                         </span>
+                                        <span class="text-[9px] font-mono text-slate-300 truncate max-w-[90px]">
+                                            {{ img.label || 'Galeri' }}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 pt-0.5 text-[10px]">
+                                        <button
+                                            v-if="primaryImageId !== img.id"
+                                            type="button"
+                                            @click="setPrimaryImage(img.id)"
+                                            class="text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                                        >
+                                            Utama
+                                        </button>
                                         <button
                                             type="button"
-                                            @click="removeNewPhoto(idx)"
-                                            class="text-rose-400 hover:text-rose-300 text-xs font-bold cursor-pointer"
+                                            @click="removeExistingImage(img.id)"
+                                            class="text-rose-400 hover:text-rose-300 underline cursor-pointer"
                                         >
-                                            ✕
+                                            Hapus
                                         </button>
                                     </div>
-                                    <input
-                                        v-model="photo.label"
-                                        type="text"
-                                        placeholder="Label (contoh: Tampak Belakang)"
-                                        class="w-full text-xs py-1 px-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono"
-                                    />
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- DROPZONE UNTUK TAMBAH FOTO -->
-                    <div
-                        @dragover.prevent="isDragging = true"
-                        @dragleave.prevent="isDragging = false"
-                        @drop.prevent="handleDrop"
-                        @click="triggerFileInput"
-                        :class="[
-                            'border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2',
-                            isDragging
-                                ? 'border-purple-400 bg-purple-500/10'
-                                : 'border-slate-800 hover:border-purple-500/50 bg-slate-900/50 hover:bg-slate-900/80'
-                        ]"
-                    >
-                        <div v-if="isConverting" class="flex flex-col items-center gap-2 py-3">
-                            <span class="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></span>
-                            <span class="text-xs font-mono text-purple-300">Mengonversi dan mengompresi foto...</span>
-                        </div>
-                        <template v-else>
-                            <span class="text-2xl">📸</span>
-                            <div class="text-xs font-bold text-slate-200">
-                                + Klik atau seret foto-foto baru ke sini (Bisa pilih banyak sekaligus)
+                        <!-- PREVIEW FOTO BARU YANG AKAN DIUNGGAH -->
+                        <div v-if="newPhotos.length > 0" class="space-y-2 pt-2 border-t border-slate-800/60">
+                            <div class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                                Foto Baru yang Ditambahkan ({{ newPhotos.length }} Foto):
                             </div>
-                            <div class="text-[11px] text-slate-500">
-                                Contoh sudut: Tampak Depan, Belakang, Samping Kiri, Samping Kanan, Detail Jahitan (Format JPG, PNG, WEBP)
-                            </div>
-                        </template>
-                    </div>
-
-                    <div v-if="conversionError" class="text-xs text-rose-400 font-semibold">
-                        {{ conversionError }}
-                    </div>
-                </div>
-
-                <!-- 3. MATRIKS VARIAN UKURAN & STOK GUDANG -->
-                <div class="p-6 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-5">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-800/80 pb-4">
-                        <div>
-                            <h3 class="text-xs font-black uppercase tracking-wider text-purple-400 flex items-center gap-2">
-                                <span>3. Varian Ukuran & Stok Gudang</span>
-                                <span v-if="isOwner" class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-bold">
-                                    Akses Owner: Edit & Hapus Aktif
-                                </span>
-                            </h3>
-                            <p class="text-[11px] text-slate-400 mt-0.5">
-                                Atur varian ukuran pakaian dan sesuaikan stok fisik langsung di sini.
-                            </p>
-                        </div>
-                        <div class="text-left sm:text-right">
-                            <span class="text-xs text-slate-400">Total Stok Fisik: </span>
-                            <span class="text-base font-black text-emerald-400 font-mono">{{ totalStockCalculated }} pcs</span>
-                        </div>
-                    </div>
-
-                    <!-- TABEL MATRIKS VARIAN UKURAN -->
-                    <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs">
-                                <thead class="bg-slate-900 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
-                                    <tr>
-                                        <th class="py-3 px-4">Ukuran</th>
-                                        <th class="py-3 px-4">SKU Internal</th>
-                                        <th class="py-3 px-4 text-center">Stok Fisik (Pcs)</th>
-                                        <th class="py-3 px-4 text-right">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-800/60 font-mono">
-                                    <!-- 1. Varian yang Sudah Ada di Database -->
-                                    <tr
-                                        v-for="v in existingVariants"
-                                        :key="v.id"
-                                        class="hover:bg-slate-800/30 transition"
-                                    >
-                                        <td class="py-3 px-4 font-bold text-white text-sm">
-                                            Size {{ v.size }}
-                                        </td>
-                                        <td class="py-3 px-4 text-slate-400 text-xs">
-                                            {{ v.sku }}
-                                        </td>
-                                        <td class="py-3 px-4 text-center">
-                                            <div v-if="isOwner" class="inline-flex items-center gap-1.5 justify-center">
-                                                <button
-                                                    type="button"
-                                                    @click="stepStock(v, -1)"
-                                                    class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center justify-center transition cursor-pointer"
-                                                >
-                                                    -
-                                                </button>
-                                                <input
-                                                    v-model.number="v.current_stock"
-                                                    type="number"
-                                                    min="0"
-                                                    class="w-20 text-center text-sm font-bold font-mono rounded-lg border-slate-800 bg-slate-950 text-emerald-400 py-1 focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    @click="stepStock(v, 1)"
-                                                    class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center justify-center transition cursor-pointer"
-                                                >
-                                                    +
-                                                </button>
-                                                <span
-                                                    v-if="v.current_stock !== v.original_stock"
-                                                    class="text-[10px] ml-1 font-bold"
-                                                    :class="v.current_stock > v.original_stock ? 'text-emerald-400' : 'text-rose-400'"
-                                                >
-                                                    ({{ v.current_stock > v.original_stock ? '+' : '' }}{{ v.current_stock - v.original_stock }})
-                                                </span>
-                                            </div>
-                                            <span v-else class="font-bold text-slate-200 text-sm">
-                                                {{ v.current_stock }} pcs
+                            <div class="space-y-2">
+                                <div
+                                    v-for="(photo, idx) in newPhotos"
+                                    :key="idx"
+                                    class="p-2.5 rounded-xl bg-slate-950 border border-emerald-500/30 flex items-center gap-2.5"
+                                >
+                                    <img
+                                        :src="photo.previewUrl"
+                                        alt="Preview"
+                                        class="w-14 h-14 object-contain rounded-lg bg-black/50 shrink-0"
+                                    />
+                                    <div class="flex-1 space-y-1">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[9px] font-mono text-emerald-400 font-bold">
+                                                {{ photo.size }} • Hemat {{ photo.saved }}%
                                             </span>
-                                        </td>
-                                        <td class="py-3 px-4 text-right">
-                                            <button
-                                                v-if="isOwner"
-                                                type="button"
-                                                @click="removeExistingVariant(v.id)"
-                                                class="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[11px] font-sans font-bold cursor-pointer transition"
-                                                title="Hapus varian ukuran ini"
-                                            >
-                                                🗑️ Hapus
-                                            </button>
-                                            <span v-else class="text-slate-600 text-[11px]">-</span>
-                                        </td>
-                                    </tr>
-
-                                    <!-- 2. Varian Baru yang Akan Ditambahkan -->
-                                    <tr
-                                        v-for="(nv, idx) in newVariants"
-                                        :key="'new-' + idx"
-                                        class="bg-emerald-950/20 hover:bg-emerald-950/30 transition border-l-2 border-emerald-500"
-                                    >
-                                        <td class="py-3 px-4 font-bold text-emerald-300 text-sm flex items-center gap-2">
-                                            <span>Size {{ nv.size }}</span>
-                                            <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-sans uppercase">
-                                                Baru
-                                            </span>
-                                        </td>
-                                        <td class="py-3 px-4 text-slate-500 text-xs italic">
-                                            {{ product.code }}-{{ nv.size }}
-                                        </td>
-                                        <td class="py-3 px-4 text-center">
-                                            <div class="inline-flex items-center gap-1.5 justify-center">
-                                                <button
-                                                    type="button"
-                                                    @click="stepNewStock(nv, -1)"
-                                                    class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center justify-center transition cursor-pointer"
-                                                >
-                                                    -
-                                                </button>
-                                                <input
-                                                    v-model.number="nv.initial_stock"
-                                                    type="number"
-                                                    min="0"
-                                                    placeholder="Stok Awal"
-                                                    class="w-20 text-center text-sm font-bold font-mono rounded-lg border-emerald-800/60 bg-slate-950 text-emerald-300 py-1 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    @click="stepNewStock(nv, 1)"
-                                                    class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center justify-center transition cursor-pointer"
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-                                        </td>
-                                        <td class="py-3 px-4 text-right">
                                             <button
                                                 type="button"
-                                                @click="removeNewVariant(idx)"
-                                                class="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[11px] font-sans font-bold cursor-pointer transition"
+                                                @click="removeNewPhoto(idx)"
+                                                class="text-rose-400 hover:text-rose-300 text-xs font-bold cursor-pointer"
                                             >
-                                                Batal ✕
+                                                ✕
                                             </button>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                        <input
+                                            v-model="photo.label"
+                                            type="text"
+                                            placeholder="Label (contoh: Tampak Belakang)"
+                                            class="w-full text-xs py-1 px-2 rounded-lg bg-slate-900 border border-slate-800 text-white font-mono"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                                    <tr v-if="existingVariants.length === 0 && newVariants.length === 0">
-                                        <td colspan="4" class="py-6 text-center text-slate-500">
-                                            Belum ada ukuran yang terdaftar. Tambahkan ukuran di bawah ini.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <!-- DROPZONE UNTUK TAMBAH FOTO -->
+                        <div
+                            @dragover.prevent="isDragging = true"
+                            @dragleave.prevent="isDragging = false"
+                            @drop.prevent="handleDrop"
+                            @click="triggerFileInput"
+                            :class="[
+                                'border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-1.5',
+                                isDragging
+                                    ? 'border-purple-400 bg-purple-500/10'
+                                    : 'border-slate-800 hover:border-purple-500/50 bg-slate-950/60 hover:bg-slate-950'
+                            ]"
+                        >
+                            <div v-if="isConverting" class="flex flex-col items-center gap-2 py-2">
+                                <span class="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></span>
+                                <span class="text-[11px] font-mono text-purple-300">Mengonversi dan mengompresi foto...</span>
+                            </div>
+                            <template v-else>
+                                <span class="text-xl">📸</span>
+                                <div class="text-xs font-bold text-slate-200">
+                                    + Klik atau seret foto-foto baru ke sini
+                                </div>
+                                <div class="text-[10px] text-slate-500">
+                                    Bisa pilih banyak foto sekaligus (JPG, PNG, WEBP)
+                                </div>
+                            </template>
+                        </div>
+
+                        <div v-if="conversionError" class="text-xs text-rose-400 font-semibold">
+                            {{ conversionError }}
                         </div>
                     </div>
 
-                    <!-- FORM MODEL DROPDOWN PILIHAN SIZE + KETIK ANGKA STOK + TOMBOL SIMPAN -->
-                    <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-                        <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
-                            Tambah Ukuran & Stok:
+                    <!-- CARD 4: PANEL RINGKASAN & TOMBOL SIMPAN (STICKY) -->
+                    <div class="bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800/80 p-5 shadow-2xl space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Ringkasan Produk</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                                {{ product.code }}
+                            </span>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                            <!-- 1. Dropdown Pilihan Ukuran -->
-                            <div :class="selectedDropdownSize === 'CUSTOM' ? 'sm:col-span-4' : 'sm:col-span-5'" class="space-y-1">
-                                <label class="text-[11px] font-semibold text-slate-400">Pilih Ukuran:</label>
-                                <select
-                                    v-model="selectedDropdownSize"
-                                    class="w-full text-xs py-2.5 px-3 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
-                                >
-                                    <option value="" disabled>-- Pilih Ukuran --</option>
-                                    <option v-for="s in sizeDropdownOptions" :key="s" :value="s">Size {{ s }}</option>
-                                    <option value="CUSTOM">Lainnya (Ketik Manual...)</option>
-                                </select>
-                            </div>
 
-                            <!-- Input jika memilih kustom -->
-                            <div v-if="selectedDropdownSize === 'CUSTOM'" class="sm:col-span-3 space-y-1">
-                                <label class="text-[11px] font-semibold text-slate-400">Nama Ukuran:</label>
-                                <input
-                                    v-model="customSizeText"
-                                    type="text"
-                                    placeholder="Contoh: 4XL / 28"
-                                    class="w-full text-xs py-2.5 px-3 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono uppercase focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
-                                />
+                        <div class="grid grid-cols-2 gap-3 text-xs font-mono">
+                            <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                                <span class="text-[10px] text-slate-500 block uppercase">Total Varian</span>
+                                <span class="text-sm font-bold text-white">{{ existingVariants.length + newVariants.length }} Ukuran</span>
                             </div>
+                            <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                                <span class="text-[10px] text-slate-500 block uppercase">Total Stok Fisik</span>
+                                <span class="text-sm font-bold text-emerald-400">{{ totalStockCalculated }} Pcs</span>
+                            </div>
+                        </div>
 
-                            <!-- 2. Ketik Angka Stok -->
-                            <div :class="selectedDropdownSize === 'CUSTOM' ? 'sm:col-span-2' : 'sm:col-span-4'" class="space-y-1">
-                                <label class="text-[11px] font-semibold text-slate-400">Jumlah Stok (Pcs):</label>
-                                <input
-                                    v-model.number="inputStockValue"
-                                    type="number"
-                                    min="0"
-                                    placeholder="0"
-                                    class="w-full text-xs py-2.5 px-3 rounded-lg bg-slate-950 border border-slate-800 text-emerald-400 font-mono font-bold text-center focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
-                                />
+                        <!-- Notifikasi Error Validasi Jika Ada -->
+                        <div v-if="Object.keys(form.errors).length > 0" class="p-3 rounded-xl bg-rose-950/40 border border-rose-800/80 text-rose-300 text-xs space-y-1">
+                            <div class="font-bold flex items-center gap-1">
+                                <span>⚠️</span>
+                                <span>Periksa input form:</span>
                             </div>
+                            <ul class="list-disc pl-4 text-[11px] space-y-0.5">
+                                <li v-for="(err, key) in form.errors" :key="key">{{ err }}</li>
+                            </ul>
+                        </div>
 
-                            <!-- 3. Tombol Simpan -->
-                            <div :class="selectedDropdownSize === 'CUSTOM' ? 'sm:col-span-3' : 'sm:col-span-3'">
-                                <button
-                                    type="button"
-                                    @click="saveVariantFromDropdown"
-                                    class="w-full py-2.5 px-4 rounded-lg bg-purple-500 hover:bg-purple-400 text-slate-950 font-black text-xs transition cursor-pointer shadow-md shadow-purple-500/10 flex items-center justify-center gap-1.5"
-                                >
-                                    <span>+ Simpan Ukuran</span>
-                                </button>
-                            </div>
+                        <!-- Tombol Aksi Simpan & Batal -->
+                        <div class="pt-2 flex items-center gap-3">
+                            <Link
+                                :href="route('warehouse.products.show', product.id)"
+                                class="flex-1 py-3 px-3.5 rounded-xl text-center bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition border border-slate-700 cursor-pointer active:scale-95"
+                            >
+                                Batal
+                            </Link>
+                            <button
+                                type="submit"
+                                :disabled="form.processing || isConverting"
+                                class="flex-2 py-3 px-5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 disabled:opacity-50 text-white text-xs font-black shadow-lg shadow-purple-500/25 cursor-pointer transition flex items-center justify-center gap-2 active:scale-95"
+                            >
+                                <span v-if="form.processing" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                <span>{{ form.processing ? 'Menyimpan...' : 'Perbarui Master Produk' }}</span>
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                <!-- SUBMIT BUTTON -->
-                <div class="pt-4 border-t border-slate-800 flex items-center justify-end">
-                    <button
-                        type="submit"
-                        :disabled="form.processing || isConverting"
-                        class="px-7 py-3 rounded-xl bg-purple-500 hover:bg-purple-400 disabled:opacity-50 text-slate-950 text-xs font-black shadow-lg shadow-purple-500/20 cursor-pointer transition flex items-center gap-2"
-                    >
-                        <span v-if="form.processing" class="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
-                        <span>{{ form.processing ? 'Menyimpan...' : 'Perbarui Master Produk' }}</span>
-                    </button>
                 </div>
 
             </form>

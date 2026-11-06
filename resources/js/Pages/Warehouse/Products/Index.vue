@@ -132,8 +132,13 @@ const deleteProduct = (product) => {
                                             >
                                                 {{ p.name }}
                                             </Link>
-                                            <div v-if="p.description" class="text-[11px] text-slate-500 font-normal line-clamp-1 mt-0.5 max-w-sm">
-                                                {{ p.description }}
+                                            <div class="flex items-center gap-2 mt-0.5">
+                                                <span v-if="p.rack_location" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                                    📍 {{ p.rack_location }}
+                                                </span>
+                                                <span v-if="p.description" class="text-[11px] text-slate-500 font-normal line-clamp-1 max-w-sm">
+                                                    {{ p.description }}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

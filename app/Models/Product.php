@@ -19,7 +19,16 @@ class Product extends Model
         'cost_price',
         'selling_price',
         'description',
+        'rack_location',
         'image',
+    ];
+
+    /**
+     * Sembunyikan HPP Modal (cost_price) dari serialisasi publik/staf secara default.
+     * Hanya Owner yang berhak melihat HPP Modal melalui makeVisible('cost_price').
+     */
+    protected $hidden = [
+        'cost_price',
     ];
 
     protected $appends = [

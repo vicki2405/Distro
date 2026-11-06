@@ -64,6 +64,10 @@ class UserController extends Controller
 
         $validated = $request->validated();
 
+        if ($validated['role'] === 'owner' && ! $request->user()->isOwner()) {
+            return back()->with('error', 'Hanya Owner yang dapat membuat pengguna baru dengan peran Owner.');
+        }
+
         $user = User::create([
             'name' => trim($validated['name']),
             'email' => strtolower(trim($validated['email'])),
@@ -90,6 +94,10 @@ class UserController extends Controller
             return back()->with('error', 'Anda tidak dapat menurunkan peran (role) akun Anda sendiri.');
         }
 
+        if ($validated['role'] === 'owner' && ! $request->user()->isOwner()) {
+            return back()->with('error', 'Hanya Owner yang dapat menetapkan peran Owner.');
+        }
+
         $payload = [
             'name' => trim($validated['name']),
             'email' => strtolower(trim($validated['email'])),
@@ -113,6 +121,10 @@ class UserController extends Controller
 
         if ($user->id === $request->user()->id) {
             return back()->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+        }
+
+        if ($user->isOwner()) {
+            return back()->with('error', 'Akun dengan peran Owner tidak dapat dihapus dari sistem.');
         }
 
         if ($user->stockMovements()->exists() || $user->stockOpnames()->exists()) {

@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             'stock.in',
             'stock.out',
             'stock.opname',
+            'stock.report',
             'users.manage',
             'roles.manage',
             'settings.manage',
@@ -53,6 +54,7 @@ class DatabaseSeeder extends Seeder
             'stock.view',
             'stock.in',
             'stock.out',
+            'stock.report',
         ]);
 
         // 1. Akun Pengguna (Owner & Pegawai Gudang)

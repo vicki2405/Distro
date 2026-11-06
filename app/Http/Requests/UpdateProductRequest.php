@@ -8,7 +8,9 @@ class UpdateProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        $user = $this->user();
+
+        return $user && ($user->isOwner() || $user->can('products.edit'));
     }
 
     public function rules(): array
@@ -19,6 +21,7 @@ class UpdateProductRequest extends FormRequest
             'cost_price' => ['nullable', 'numeric', 'min:0'],
             'selling_price' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string', 'max:1000'],
+            'rack_location' => ['nullable', 'string', 'max:50'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'images' => ['nullable', 'array'],
             'images.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],

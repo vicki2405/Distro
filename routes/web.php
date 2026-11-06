@@ -6,7 +6,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SizeController;
 use App\Http\Controllers\StockInController;
-use App\Http\Controllers\StockMovementController;
+use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\StockOutController;
 use App\Http\Controllers\StoreSettingController;
 use App\Http\Controllers\UserController;
@@ -61,7 +61,7 @@ Route::get('/', function (Request $request) {
 
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
+        'canRegister' => false,
         'products' => $products,
         'categories' => $categories,
         'filters' => $request->only(['search', 'category', 'sort']),
@@ -83,10 +83,22 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('sizes', SizeController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::get('/in', [StockInController::class, 'create'])->name('in.create');
+        Route::get('/in/export', [StockInController::class, 'export'])->name('in.export');
         Route::post('/in', [StockInController::class, 'store'])->name('in.store');
+        Route::delete('/in/{movement}', [StockInController::class, 'destroy'])->name('in.destroy');
         Route::get('/out', [StockOutController::class, 'create'])->name('out.create');
+        Route::get('/out/export', [StockOutController::class, 'export'])->name('out.export');
         Route::post('/out', [StockOutController::class, 'store'])->name('out.store');
-        Route::get('/movements', [StockMovementController::class, 'index'])->name('movements');
+        Route::delete('/out/{movement}', [StockOutController::class, 'destroy'])->name('out.destroy');
+        Route::get('/movements', fn () => redirect()->route('warehouse.opnames.index'))->name('movements');
+        Route::get('/opnames', [StockOpnameController::class, 'index'])->name('opnames.index');
+        Route::get('/opnames/sheet', [StockOpnameController::class, 'sheetView'])->name('opnames.sheet');
+        Route::get('/opnames/sheet/download', [StockOpnameController::class, 'sheetDownload'])->name('opnames.sheet.download');
+        Route::get('/opnames/create', [StockOpnameController::class, 'create'])->name('opnames.create');
+        Route::post('/opnames', [StockOpnameController::class, 'store'])->name('opnames.store');
+        Route::post('/opnames/{opname}/adjust', [StockOpnameController::class, 'adjust'])->name('opnames.adjust');
+        Route::delete('/opnames/{opname}', [StockOpnameController::class, 'destroy'])->name('opnames.destroy');
+        Route::get('/opnames/export', [StockOpnameController::class, 'export'])->name('opnames.export');
         Route::resource('users', UserController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('roles', RoleController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::get('/settings', [StoreSettingController::class, 'index'])->name('settings.index');

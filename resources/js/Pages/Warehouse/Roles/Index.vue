@@ -20,6 +20,7 @@ const permissionLabels = {
     'stock.in': 'Input Barang Masuk',
     'stock.out': 'Input Barang Keluar',
     'stock.opname': 'Audit Stock Opname',
+    'stock.report': 'Cetak & Export Laporan Stok (PDF/Excel)',
     'users.manage': 'Kelola Akun Pengguna',
     'roles.manage': 'Kelola Role & Hak Akses',
 };

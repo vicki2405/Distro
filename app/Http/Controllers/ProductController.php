@@ -40,6 +40,10 @@ class ProductController extends Controller
         $products = $query->latest()->paginate(10)->withQueryString();
         $categories = Category::orderBy('name')->get();
 
+        if ($isOwner) {
+            $products->getCollection()->each->makeVisible('cost_price');
+        }
+
         return Inertia::render('Warehouse/Products/Index', [
             'products' => $products,
             'categories' => $categories,
@@ -48,8 +52,11 @@ class ProductController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        $user = $request->user();
+        abort_unless($user && ($user->isOwner() || $user->can('products.create')), 403, 'Akses ditolak. Anda tidak memiliki izin untuk menambah produk.');
+
         $categories = Category::orderBy('name')->get();
         $availableSizes = Size::orderBy('order')->orderBy('name')->pluck('name');
 
@@ -81,6 +88,7 @@ class ProductController extends Controller
             'cost_price' => $validated['cost_price'] ?? 0,
             'selling_price' => $validated['selling_price'],
             'description' => $validated['description'] ?? null,
+            'rack_location' => ! empty($validated['rack_location']) ? trim($validated['rack_location']) : null,
             'image' => $imagePath,
         ]);
 
@@ -145,6 +153,10 @@ class ProductController extends Controller
 
         $totalStock = (int) $product->variants->sum('current_stock');
 
+        if ($isOwner) {
+            $product->makeVisible('cost_price');
+        }
+
         return Inertia::render('Warehouse/Products/Show', [
             'product' => $product,
             'movements' => $movements,
@@ -156,6 +168,7 @@ class ProductController extends Controller
     public function edit(Product $product, Request $request): Response
     {
         $user = $request->user();
+        abort_unless($user && ($user->isOwner() || $user->can('products.edit')), 403, 'Akses ditolak. Anda tidak memiliki izin untuk mengedit produk.');
         $isOwner = $user ? $user->isOwner() : false;
 
         $product->load([
@@ -163,6 +176,11 @@ class ProductController extends Controller
             'variants' => fn ($q) => $q->orderBy('id'),
             'images',
         ]);
+
+        if ($isOwner) {
+            $product->makeVisible('cost_price');
+        }
+
         $categories = Category::orderBy('name')->get();
 
         return Inertia::render('Warehouse/Products/Edit', [
@@ -183,6 +201,7 @@ class ProductController extends Controller
             'cost_price' => $validated['cost_price'] ?? 0,
             'selling_price' => $validated['selling_price'],
             'description' => $validated['description'] ?? null,
+            'rack_location' => ! empty($validated['rack_location']) ? trim($validated['rack_location']) : null,
         ];
 
         if ($request->boolean('delete_main_image')) {
@@ -361,8 +380,11 @@ class ProductController extends Controller
             ->with('success', "Data artikel '{$product->name}' berhasil diperbarui.");
     }
 
-    public function destroy(Product $product): RedirectResponse
+    public function destroy(Product $product, Request $request): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless($user && ($user->isOwner() || $user->can('products.delete')), 403, 'Akses ditolak. Anda tidak memiliki izin untuk menghapus produk.');
+
         // Cek apakah ada mutasi stok yang terhubung
         $hasMovements = $product->variants()->whereHas('stockMovements')->exists();
 

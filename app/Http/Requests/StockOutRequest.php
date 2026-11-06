@@ -8,7 +8,9 @@ class StockOutRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        $user = $this->user();
+
+        return $user && ($user->isOwner() || $user->isStaff() || $user->can('stock.out'));
     }
 
     public function rules(): array
@@ -19,7 +21,7 @@ class StockOutRequest extends FormRequest
             'reference_number' => ['required', 'string', 'max:100'],
             'recipient_name' => ['nullable', 'string', 'max:150'],
             'notes' => ['nullable', 'string', 'max:500'],
-            'proof_image' => ['nullable', 'image', 'max:5120'],
+            'proof_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.variant_id' => ['required', 'exists:product_variants,id'],
             'items.*.quantity' => ['required', 'integer', 'min:0'],

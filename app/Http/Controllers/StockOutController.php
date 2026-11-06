@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\StoreSetting;
+use App\Services\StockReportExportService;
 use App\Services\StockService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +23,9 @@ class StockOutController extends Controller
 
     public function create(Request $request): Response
     {
+        $user = $request->user();
+        abort_unless($user && ($user->isOwner() || $user->isStaff() || $user->can('stock.out')), 403, 'Akses ditolak. Anda tidak memiliki izin untuk mencatat pengeluaran barang.');
+
         $products = Product::with(['category', 'variants' => function ($q) {
             $q->orderBy('id');
         }])->orderBy('name')->get();
@@ -57,6 +61,35 @@ class StockOutController extends Controller
         ]);
     }
 
+    public function export(Request $request, StockReportExportService $exportService)
+    {
+        $user = $request->user();
+        abort_unless(
+            $user && ($user->can('stock.report') || $user->isOwner()),
+            403,
+            'Akses ditolak. Anda tidak memiliki izin untuk mencetak laporan stok.'
+        );
+
+        $filtered = $exportService->getFilteredMovements($request, 'out');
+        $format = (string) $request->input('format', 'pdf');
+
+        if ($format === 'excel') {
+            return $exportService->exportExcel(
+                $filtered['movements'],
+                'out',
+                $filtered['periodTitle'],
+                $filtered['filenameBase']
+            );
+        }
+
+        return $exportService->exportPdf(
+            $filtered['movements'],
+            'out',
+            $filtered['periodTitle'],
+            $filtered['filenameBase']
+        );
+    }
+
     public function store(StockOutRequest $request): RedirectResponse
     {
         $validated = $request->validated();
@@ -77,7 +110,15 @@ class StockOutController extends Controller
                 continue;
             }
 
-            $variant = ProductVariant::findOrFail($item['variant_id']);
+            $variant = ProductVariant::where('id', $item['variant_id'])
+                ->where('product_id', $validated['product_id'])
+                ->first();
+
+            if (! $variant) {
+                return back()->withErrors([
+                    'error' => 'Varian ukuran yang dipilih tidak sesuai dengan artikel produk yang dipilih.',
+                ]);
+            }
 
             if ($variant->current_stock < $qty) {
                 return back()->withErrors([
@@ -108,5 +149,28 @@ class StockOutController extends Controller
 
         return redirect()->route('warehouse.dashboard')
             ->with('success', 'Pengeluaran barang berhasil dicatat.');
+    }
+
+    public function destroy(Request $request, StockMovement $movement): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user && $user->isOwner(), 403, 'Akses ditolak. Fitur hapus riwayat stok hanya dapat dilakukan oleh akun Admin / Owner.');
+
+        if ($movement->type !== 'out') {
+            abort(404);
+        }
+
+        try {
+            $ref = $movement->reference_number ?: 'Tanpa No. SJ';
+            $productName = $movement->variant?->product?->name ?? 'Produk';
+            $size = $movement->variant?->size ?? '';
+            $qty = $movement->quantity;
+
+            $this->stockService->revertAndDestroyMovement($movement);
+
+            return back()->with('success', "Transaksi pengeluaran [{$ref}] untuk {$productName} (Size {$size}) berhasil dihapus dan stok produk telah dikembalikan sebanyak {$qty} pcs.");
+        } catch (Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
     }
 }

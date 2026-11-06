@@ -8,7 +8,9 @@ class StockInRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        $user = $this->user();
+
+        return $user && ($user->isOwner() || $user->isStaff() || $user->can('stock.in'));
     }
 
     public function rules(): array
@@ -18,7 +20,7 @@ class StockInRequest extends FormRequest
             'reference_number' => ['required', 'string', 'max:100'],
             'supplier_name' => ['nullable', 'string', 'max:150'],
             'notes' => ['nullable', 'string', 'max:500'],
-            'proof_image' => ['nullable', 'image', 'max:5120'], // Max 5MB
+            'proof_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'], // Max 5MB, strict raster
             'items' => ['required', 'array', 'min:1'],
             'items.*.size' => ['required', 'string', 'max:10'],
             'items.*.quantity' => ['required', 'integer', 'min:0'],

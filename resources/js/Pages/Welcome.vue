@@ -306,7 +306,7 @@ const getStockBadge = (total) => {
                             v-model="search"
                             @keyup.enter="applyFilters"
                             type="text"
-                            placeholder="Cari nama artikel, kode SKU, hoodie, kaos..."
+                            placeholder="Cari nama artikel, kategori, hoodie, kaos..."
                             class="w-full text-xs sm:text-sm rounded-2xl border-slate-600/70 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-400 bg-slate-800/80 text-white py-2.5 sm:py-3 pl-10 pr-9 transition placeholder-slate-400 font-medium backdrop-blur-md shadow-inner"
                         />
                         <button
@@ -514,12 +514,9 @@ const getStockBadge = (total) => {
                             <!-- INFORMASI PRODUK -->
                             <div class="p-3.5 sm:p-4 space-y-2 sm:space-y-2.5">
                                 <div>
-                                    <div class="text-[9px] sm:text-[11px] font-mono text-amber-400 font-bold uppercase truncate">
-                                        {{ product.code }}
-                                    </div>
                                     <h3
                                         @click="openQuickView(product)"
-                                        class="text-xs sm:text-sm font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-1 cursor-pointer mt-0.5"
+                                        class="text-xs sm:text-sm font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-1 cursor-pointer"
                                         :title="product.name"
                                     >
                                         {{ product.name }}
@@ -709,10 +706,7 @@ const getStockBadge = (total) => {
                                         <span class="px-2.5 py-0.5 rounded-full bg-slate-750 text-[10px] font-bold text-slate-200 border border-slate-600/70">
                                             {{ previewProduct.category?.name || 'Distro' }}
                                         </span>
-                                        <div class="text-[11px] font-mono text-amber-400 font-bold mt-1">
-                                            SKU: {{ previewProduct.code }}
-                                        </div>
-                                        <h2 class="text-base sm:text-xl font-black text-white mt-0.5 leading-tight">
+                                        <h2 class="text-base sm:text-xl font-black text-white mt-1 leading-tight">
                                             {{ previewProduct.name }}
                                         </h2>
                                     </div>
@@ -757,10 +751,9 @@ const getStockBadge = (total) => {
                                             class="p-2.5 flex items-center justify-between"
                                         >
                                             <div class="flex items-center gap-2">
-                                                <span class="w-6 h-6 rounded-lg bg-slate-700 border border-slate-600 flex items-center justify-center font-bold font-mono text-white text-[11px]">
+                                                <span class="px-2.5 py-0.5 rounded-md bg-slate-700 border border-slate-600 flex items-center justify-center font-bold font-mono text-white text-xs">
                                                     {{ v.size }}
                                                 </span>
-                                                <span class="text-slate-300 font-mono text-[10px]">{{ v.sku }}</span>
                                             </div>
                                             <div class="font-bold text-xs font-mono">
                                                 <span v-if="v.current_stock > 0" class="text-emerald-400">
@@ -783,7 +776,7 @@ const getStockBadge = (total) => {
                                 <div class="flex items-center gap-2">
                                     <a
                                         v-if="storeSetting?.whatsapp_number"
-                                        :href="'https://wa.me/' + storeSetting.whatsapp_number.replace(/\D/g, '') + '?text=' + encodeURIComponent('Halo ' + (storeSetting.store_name || 'Admin') + ', saya tertarik dengan produk ' + previewProduct.name + ' (' + previewProduct.code + '). Apakah stok masih ready?')"
+                                        :href="'https://wa.me/' + storeSetting.whatsapp_number.replace(/\D/g, '') + '?text=' + encodeURIComponent('Halo ' + (storeSetting.store_name || 'Admin') + ', saya tertarik dengan produk ' + previewProduct.name + '. Apakah stok masih ready?')"
                                         target="_blank"
                                         class="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition active:scale-95 flex items-center gap-1.5"
                                     >

@@ -274,10 +274,10 @@ const formatTime = (isoString) => {
                             <p class="text-xs text-slate-400 mt-0.5">Jejak pergerakan barang terbaru.</p>
                         </div>
                         <Link
-                            :href="route('warehouse.movements')"
-                            class="text-xs font-bold text-amber-400 hover:text-amber-300 transition"
+                            :href="route('warehouse.opnames.index')"
+                            class="text-xs font-bold text-sky-400 hover:text-sky-300 transition"
                         >
-                            Semua Mutasi →
+                            Lihat Stock Opname →
                         </Link>
                     </div>
 

@@ -63,6 +63,14 @@ const closeProofModal = () => {
                         <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
                             {{ product.category?.name }}
                         </span>
+                        <span
+                            v-if="product.rack_location"
+                            class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1 font-mono"
+                            title="Lokasi Rak Penyimpanan"
+                        >
+                            <span>📍</span>
+                            <span>{{ product.rack_location }}</span>
+                        </span>
                     </div>
                 </div>
 
@@ -245,10 +253,10 @@ const closeProofModal = () => {
                                 </p>
                             </div>
                             <Link
-                                :href="route('warehouse.movements')"
-                                class="text-xs font-mono text-purple-400 hover:text-purple-300 underline"
+                                :href="route('warehouse.opnames.index')"
+                                class="text-xs font-mono text-sky-400 hover:text-sky-300 underline"
                             >
-                                Lihat Semua Mutasi →
+                                Cek Stock Opname →
                             </Link>
                         </div>
 

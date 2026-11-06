@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm, Link, router } from '@inertiajs/vue3';
+import StockReportExportModal from '@/Components/StockReportExportModal.vue';
 
 const props = defineProps({
     products: Array,
@@ -9,6 +10,9 @@ const props = defineProps({
     filters: Object,
     storeSetting: Object,
 });
+
+// Modal Cetak & Export Laporan
+const isExportModalOpen = ref(false);
 
 // Mode Tampilan: 'table' (Daftar Pengeluaran & Cetak) | 'form' (Form Input Baru)
 const viewMode = ref('table');
@@ -35,6 +39,20 @@ const openDetailModal = (movement) => {
 
 const closeDetailModal = () => {
     selectedMovementForDetail.value = null;
+};
+
+// Hapus Transaksi Pengeluaran & Revert Stok (Khusus Admin / Owner)
+const deleteMovement = (movement) => {
+    const ref = movement.reference_number || 'transaksi ini';
+    const prodName = movement.variant?.product?.name || 'produk';
+    const size = movement.variant?.size || '';
+    const qty = movement.quantity;
+
+    if (confirm(`PERINGATAN AKUN ADMIN:\n\nApakah Anda yakin ingin membatalkan & menghapus transaksi pengeluaran '${ref}'?\n\nStok artikel '${prodName}' (Size ${size}) akan otomatis dikembalikan sebanyak +${qty} pcs ke stok gudang.`)) {
+        router.delete(route('warehouse.out.destroy', movement.id), {
+            preserveScroll: true,
+        });
+    }
 };
 
 // Modal Cetak Surat Jalan
@@ -145,6 +163,17 @@ const submit = () => {
 
                 <!-- Tombol Navigasi Toggle Antara Tabel dan Form -->
                 <div class="flex items-center gap-2.5">
+                    <!-- Tombol Cetak / Export Laporan (Sesuai Hak Akses stock.report atau Owner) -->
+                    <button
+                        v-if="$page.props.auth?.is_owner || $page.props.auth?.permissions?.includes('stock.report') || $page.props.auth?.user?.role === 'owner'"
+                        type="button"
+                        @click="isExportModalOpen = true"
+                        class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs transition active:scale-95 cursor-pointer shadow-sm"
+                    >
+                        <span>🖨️</span>
+                        <span>Cetak Laporan</span>
+                    </button>
+
                     <button
                         v-if="viewMode === 'table'"
                         type="button"
@@ -290,6 +319,16 @@ const submit = () => {
                                         >
                                             <span>🖨️</span>
                                             <span>Cetak</span>
+                                        </button>
+                                        <!-- Tombol Hapus Transaksi (Khusus Akun Admin / Owner) -->
+                                        <button
+                                            v-if="$page.props.auth?.is_owner || $page.props.auth?.user?.role === 'owner'"
+                                            type="button"
+                                            @click="deleteMovement(m)"
+                                            class="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold transition active:scale-95 cursor-pointer"
+                                            title="Hapus Transaksi & Kembalikan Stok Produk (Khusus Admin)"
+                                        >
+                                            <span>🗑️</span>
                                         </button>
                                     </div>
                                 </td>
@@ -856,6 +895,14 @@ const submit = () => {
                 </button>
             </div>
         </div>
+
+        <!-- MODAL EXPORT LAPORAN BARANG KELUAR -->
+        <StockReportExportModal
+            :show="isExportModalOpen"
+            type="out"
+            :export-url="route('warehouse.out.export')"
+            @close="isExportModalOpen = false"
+        />
 
     </AuthenticatedLayout>
 </template>

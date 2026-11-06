@@ -1,3 +1,86 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Living Ambient Mesh & Aurora Animations (High Visibility, Smooth GPU Acceleration) */
+
+/* 1. Dynamic Moving Background Gradient */
+@keyframes living-gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.living-bg-mesh {
+  background: linear-gradient(135deg, #0b0f19 0%, #151d30 25%, #1a1e38 50%, #131c2e 75%, #0b0f19 100%);
+  background-size: 300% 300%;
+  animation: living-gradient 12s ease infinite;
+}
+
+/* 2. Floating Luminous Light Orbs */
+@keyframes aurora-orb-1 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0px) scale(1);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate3d(100px, 50px, 0px) scale(1.25);
+    opacity: 0.95;
+  }
+}
+
+@keyframes aurora-orb-2 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0px) scale(1.1);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate3d(-90px, 60px, 0px) scale(0.85);
+    opacity: 0.4;
+  }
+}
+
+@keyframes aurora-orb-3 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0px) scale(0.95);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate3d(70px, -70px, 0px) scale(1.2);
+    opacity: 0.85;
+  }
+}
+
+@keyframes shimmer-line {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.animate-aurora-1, .animate-orb-1 {
+  animation: aurora-orb-1 9s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-aurora-2, .animate-orb-2 {
+  animation: aurora-orb-2 11s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-aurora-3, .animate-orb-3 {
+  animation: aurora-orb-3 13s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-shimmer, .animate-shimmer-sweep {
+  animation: shimmer-line 3.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
